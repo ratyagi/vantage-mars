@@ -47,6 +47,7 @@ async function loadValidation() {
   const chip = $("valChip"), box = $("valPanel");
   try {
     const d = await (await fetch("data/validation/results.json")).json();
+    S.valid = d;
     const f = (v, n = 2) => (+v).toFixed(n);
     const rows = d.stops.map((s) => `<tr><td>Sol ${s.sol}</td><td>${s.skyline_all.n}</td><td><b>${f(s.skyline_all.rmse_deg)}&deg;</b></td><td>${Math.round(s.skyline_all.within_1deg * 100)}%</td></tr>`).join("");
     chip.textContent = "Skyline vs real Navcam: " + d.stops.map((x) => f(x.skyline_all.rmse_deg, 1)).join(" / ") + "\u00b0 at 3 stops";
@@ -57,8 +58,10 @@ async function loadValidation() {
       <p class="note"><b>Works:</b> when the skyline is terrain inside the 2.5 km window (foothills, nearby ridges), error is about half a degree.</p>
       <p class="note"><b>Fails:</b> when the real skyline lies beyond the window (looking north across the crater floor at sol 4634) the model horizon is 3 to 6&deg; too low. That case is measured at one stop only. Treat far horizons as unvalidated.</p>
       <p class="note">Moving the observer 25 m raises error at sol 4748 from 0.43&deg; to 0.81&deg;.</p>
+      <div class="vbtns"><span class="note">Show the real camera skyline over the predicted view:</span>${d.stops.map((x, i) => `<button class="pill" data-stop="${i}">Sol ${x.sol}</button>`).join("")}<button class="pill" data-stop="-1">Clear</button></div>
       <img class="vimg" src="data/validation/skyline_comparison.png" alt="Predicted vs real skyline at three Curiosity stops" loading="lazy">
       <p class="note">Images: NASA/JPL-Caltech. <a href="https://github.com/" id="valLink" target="_blank" rel="noopener">Method and links</a> are in docs/VALIDATION.md.</p>`;
+    box.querySelectorAll("button[data-stop]").forEach((b) => { b.onclick = () => showRealCamera(+b.dataset.stop); });
     const a = $("valLink"); if (a) { a.href = "https://github.com/" + (location.hostname.split(".")[0] || "") + "/vantage-mars/blob/main/docs/VALIDATION.md"; }
   } catch (_) {
     chip.textContent = "Validation: results unavailable"; chip.className = "chip warn";
@@ -412,6 +415,19 @@ function drawPanoOn(c, ratio) {
       ctx.fillStyle = "#fff8dc"; ctx.beginPath(); ctx.arc(sx, sy, 4, 0, 7); ctx.fill();
     }
   }
+  // real-camera overlay: skyline traced from a Curiosity Navcam frame at this stop (validation data)
+  const rc = S.real;
+  if (rc && Math.hypot(cur.x - rc.stop.rover_position.x_m, cur.y - rc.stop.rover_position.y_m) < 40) {
+    const pts = rc.stop.columns.map((q) => ({ x: colOf(q.az), yr: rowOfA(q.real_el), yp: rowOfA(q.pred_el) })).filter((q) => q.x > -4 && q.x < CW + 4 && q.yr > 0 && q.yr < CH).sort((a1, b1) => a1.x - b1.x);
+    ctx.strokeStyle = "rgba(76,201,216,.35)"; ctx.lineWidth = 1;
+    for (const q of pts) { ctx.beginPath(); ctx.moveTo(q.x, q.yr); ctx.lineTo(q.x, q.yp); ctx.stroke(); }
+    ctx.fillStyle = "#4cc9d8";
+    for (const q of pts) { ctx.beginPath(); ctx.arc(q.x, q.yr, 2.4, 0, 7); ctx.fill(); }
+    const t1 = `Blue: skyline traced from a real Curiosity Navcam frame, sol ${rc.stop.sol}.  White: Vantage prediction.  RMSE ${rc.stop.skyline_all.rmse_deg.toFixed(2)}\u00b0`;
+    ctx.font = "600 11px Inter, system-ui, sans-serif"; ctx.textAlign = "left";
+    const tw1 = ctx.measureText(t1).width + 14;
+    ctx.fillStyle = "rgba(8,10,13,.82)"; ctx.fillRect(8, 34, tw1, 20); ctx.fillStyle = "#bfeff5"; ctx.fillText(t1, 15, 48);
+  }
   // compass tape
   const g = ctx.createLinearGradient(0, 0, 0, 30); g.addColorStop(0, "rgba(8,10,13,.8)"); g.addColorStop(1, "rgba(8,10,13,0)");
   ctx.fillStyle = g; ctx.fillRect(0, 0, CW, 30);
@@ -665,6 +681,21 @@ window.addEventListener("keydown", (e) => {
 window.addEventListener("resize", () => { if (!$("walker").classList.contains("hidden")) drawPano(); });
 
 
+
+function showRealCamera(i) {
+  if (i < 0 || !S.valid || !S.rows.length) { S.real = null; recompute(); return; }
+  const stop = S.valid.stops[i];
+  let best = 0, bd = Infinity;
+  S.rows.forEach((r, k) => { const d = Math.hypot(r.x - stop.rover_position.x_m, r.y - stop.rover_position.y_m); if (d < bd) { bd = d; best = k; } });
+  if (bd > 40) return;
+  let bc = 0, bn = -1;
+  for (let c = 0; c < 360; c += 5) { const n = stop.columns.filter((q) => Math.abs(((q.az - c + 540) % 360) - 180) <= 55).length; if (n > bn) { bn = n; bc = c; } }
+  S.real = { stop };
+  $("lookMode").value = "manual"; $("lookAz").value = bc; $("pos").value = Math.round((best / (S.rows.length - 1)) * 1000);
+  recompute();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 // ---------- welcome hero: a live view and three numbers computed from the loaded route ----------
 let heroTimer = null, heroPos0 = 0;
 function heroStats() {
@@ -698,7 +729,7 @@ const TOUR = [
   { t: () => `Solar particle event alert with a 20 minute shelter limit. The contours show the fastest way home, bending around steep ground. From here it takes ${(returnMin(currentSample()) || 0).toFixed(0)} min, over the limit, so the verdict is HOLD. Retracing the drawn route would take ${(S.cum[S.rows.indexOf(currentSample())] || 0).toFixed(0)} min.`, go: () => { $("sepAlert").checked = true; $("shelterMin").value = 20; setPos(950); } },
   { t: () => S.radio && S.relay?.picks?.length ? `Radio shadow: terrain blocks line of sight to the habitat on ${Math.round((1 - S.radio.coveredFrac) * 100)}% of the route, up to ${S.radio.worst.len.toFixed(0)} m in a row. One relay at R1 (${S.relay.picks[0].dHab.toFixed(0)} m from the habitat) would cover ${Math.round(S.relay.picks[0].coveredFrac * 100)}%. Geometry only, not a link budget.` : "Radio shadow: where terrain blocks line of sight to the habitat.", go: () => { $("showRadio").checked = true; setPos(800); } },
   { t: "The planner finds a slope-limited route that keeps the habitat in view and compares it with the drawn one.", go: () => { $("sepAlert").checked = false; $("shelterMin").value = 60; setPos(300); $("btnPlan").click(); } },
-  { t: "Checked against real Curiosity camera frames: about 0.5 degrees of skyline error where the horizon is inside the model window, and 3 to 6 degrees low toward the far crater rim. Both numbers are on the page.", go: () => { setPos(0); const p = $("valPanel"); const d = p && p.closest("details"); if (d) d.open = true; if (p) p.scrollIntoView({ block: "center" }); } },
+  { t: () => "Real camera check. Blue dots are the skyline traced from a real Curiosity Navcam frame at sol 4748, white is the Vantage prediction: 0.43 degrees of error. Toward the far crater rim at sol 4634 the prediction is about 5 degrees low, and the validation panel shows that too.", go: () => { showRealCamera(1); } },
 ];
 const TOURSTATE = { ltst: 12 };
 let tourI = -1;
@@ -709,7 +740,7 @@ function tourShow(i) {
   $("tStep").textContent = `${tourI + 1} / ${TOUR.length}`;
   $("tNext").textContent = tourI === TOUR.length - 1 ? "Finish" : "Next";
   walkerClose();
-  $("ltst").value = TOURSTATE.ltst; $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false;
+  $("ltst").value = TOURSTATE.ltst; $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false; $("lookMode").value = "travel"; S.real = null;
   drawHillshade();
   TOUR[tourI].go();
   const tt = TOUR[tourI].t; $("tText").textContent = typeof tt === "function" ? tt() : tt;
@@ -723,7 +754,7 @@ function tourStart() {
 function tourEnd() {
   walkerClose();
   $("tourbar").classList.add("hidden"); tourI = -1;
-  $("ltst").value = TOURSTATE.ltst; drawHillshade(); $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false; recompute();
+  $("ltst").value = TOURSTATE.ltst; drawHillshade(); $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false; $("lookMode").value = "travel"; S.real = null; recompute();
 }
 $("wTour").onclick = () => { heroStop(); tourStart(); };
 $("wExplore").onclick = () => { heroStop(); $("welcome").classList.add("hidden"); };
