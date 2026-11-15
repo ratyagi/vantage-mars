@@ -1,1 +1,14 @@
-{"type":"module"}
+{
+  "name": "sightline-mars",
+  "version": "0.1.0",
+  "description": "Terrain-based visibility planning for Mars EVA (Gale Crater boxwork)",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/core.test.mjs",
+    "test:pipeline": "python tests/test_pipeline.py",
+    "data": "python pipeline/fetch_terrain_window.py",
+    "serve": "cd web && python -m http.server 8000"
+  }
+}

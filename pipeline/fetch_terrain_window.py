@@ -120,6 +120,7 @@ def main():
     ap.add_argument("--step", type=int, default=1, help="block-average factor (1 = native 1 m)")
     ap.add_argument("--out", default=os.path.join("web", "data"))
     ap.add_argument("--raw-dir", default=os.path.join("data", "raw"))
+    ap.add_argument("--synthetic", action="store_true", help="mark output as synthetic test data (the web app then shows a banner)")
     args = ap.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
@@ -245,7 +246,7 @@ def main():
             "product": "MSL_Gale_DEM_Mosaic_1m_v3 (Calef and Parker, USGS Astrogeology, PDS Annex)",
             "stated_control": ("HRSC controlled to MOLA: about 100 m horizontal and about 1 m vertical "
                                "per USGS metadata; HiRISE parts tied to CTX/HRSC. Local relative accuracy is better."),
-            "synthetic": False,
+            "synthetic": bool(args.synthetic),
         }
         with open(os.path.join(args.out, "dem.json"), "w", encoding="utf-8") as f:
             json.dump(meta, f, indent=2)

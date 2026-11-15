@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+title: "Sightline: terrain-based visibility planning for Mars EVA"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Tyagi
+    given-names: Rashi
+date-released: 2026-11-15
+license: MIT
+abstract: >-
+  Predicts what a walking astronaut can see along a planned Mars EVA route
+  (habitat, rover, partner, landmarks) from a digital elevation model, and flags
+  low-sun and hidden-ground conditions. Built for the NASA Space Apps Challenge 2026.
+keywords: [Mars, EVA, visibility, viewshed, digital elevation model, Gale Crater]

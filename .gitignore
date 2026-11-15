@@ -1,6 +1,7 @@
+# raw downloads (large); processed output in web/data IS committed so the demo works
 data/raw/*
 !data/raw/.gitkeep
 __pycache__/
 *.pyc
-tests/_synthetic/
+.pytest_cache/
 .DS_Store

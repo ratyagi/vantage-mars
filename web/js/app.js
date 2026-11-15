@@ -15,10 +15,11 @@ const S = {
 async function init() {
   try {
     S.T = await Terrain.load("data/");
-    $("dataBadge").textContent = `REAL DEM: ${S.T.meta.product || "USGS Gale 1 m"}, ${S.T.width}x${S.T.height} at ${S.T.cell} m`;
+    if (S.T.meta.synthetic) throw new Error("data flagged synthetic");
+    $("dataBadge").textContent = `USGS Gale DEM, ${S.T.width}x${S.T.height} at ${S.T.cell} m`;
     $("dataBadge").className = "chip real";
   } catch (e) {
-    S.T = makeSyntheticTerrain(800, 800, 2);
+    S.T = makeSyntheticTerrain(800, 800, 2); // development fallback only
     $("dataBadge").textContent = "SYNTHETIC TERRAIN (not Mars data)";
     $("dataBadge").className = "chip synth";
     const b = $("banner");
