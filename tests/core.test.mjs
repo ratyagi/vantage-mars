@@ -9,6 +9,7 @@ import {
   lineOfSight, sampleRoute, routeVisibility, blindRuns, skyline,
   hiddenGroundAhead, renderPanorama, curvDrop, azimuthDeg, walkMinutes, suggestLandmarks,
   cumulativeWalkMinutes, inTerrainShadow, shadowMap, visibilityFraction, planRoute,
+  costField, daylightLeftMin, radioCoverage, relaySites,
 } from "../web/js/visibility.js";
 
 function flat(w = 400, h = 400, cell = 1, z = 0) {
@@ -235,4 +236,41 @@ test("real terrain window (if present): sane grid, landmarks valid, route visibl
   const anyUnknown = rows.some((r) => Object.values(r.vis).some((v) => v.visible === null));
   assert.ok(anyVisible, "some landmark should be visible somewhere on the route");
   assert.ok(!anyUnknown, "no target should fall on missing data");
+});
+
+test("costField: level ground time is distance over pace, and a wall costs a detour", () => {
+  const T = flat(400, 400, 1, 0);
+  const f = costField(T, { x: 200, y: 200 }, { g: 5, radius: 150 });
+  const m = f.at(300, 200); // 100 m east at 2 km/h = 3 min
+  assert.ok(Math.abs(m - 3) < 0.4, `got ${m}`);
+  const W = withBlock(flat(400, 400, 1, 0), 240, 250, 100, 300, 40); // steep-sided plateau east of the source
+  const g = costField(W, { x: 200, y: 200 }, { g: 5, radius: 150 });
+  assert.ok(g.at(300, 200) > m, "plateau must cost more than level ground");
+});
+
+test("daylightLeftMin: afternoon counts down, morning returns null", () => {
+  const T = flat();
+  const sunAt = (h) => sunPosition(-4.8, 90, h);
+  const pm = daylightLeftMin(T, 100, 100, sunAt, 15);
+  assert.ok(pm && pm.min > 60 && pm.min < 400, JSON.stringify(pm));
+  assert.equal(daylightLeftMin(T, 100, 100, sunAt, 5.5), null);
+});
+
+test("radio: a wall cuts coverage and a relay on the open side restores it", () => {
+  const T = withBlock(flat(), 150, 154, 120, 280, 30); // finite wall, open around its ends
+  const rows = []; for (let i = 0; i < 20; i++) rows.push({ x: 200 + i * 6, y: 200, s: i * 10 });
+  const hab = { x: 100, y: 200 };
+  const c = radioCoverage(T, rows, hab, 3, 1.7, (a, b) => (b - a + 1) * 0.3);
+  assert.ok(c.coveredFrac < 0.2);
+  assert.ok(c.worst.len >= 150);
+  const r = relaySites(T, rows, hab, 3, { grid: 25, pad: 120, top: 2 });
+  assert.ok(r.picks.length >= 1 && r.picks[0].coveredFrac > 0.5, JSON.stringify(r.picks[0]));
+});
+
+test("hiddenGroundAhead: a hazard height changes the hidden fraction", () => {
+  const T = withBlock(flat(), 120, 124, 0, 400, 0.8);
+  const a = hiddenGroundAhead(T, 100, 200, 90, 1.7, 40, 60, 0.0);
+  assert.ok(isFinite(a.hiddenFraction));
+  const b = hiddenGroundAhead(T, 100, 200, 90, 1.7, 40, 60, 0.3);
+  assert.ok(b.hiddenFraction <= a.hiddenFraction && a.hiddenFraction > 0, "taller hazards are easier to see");
 });

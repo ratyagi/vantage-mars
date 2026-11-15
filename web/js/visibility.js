@@ -132,7 +132,7 @@ export function skyline(T, ox, oy, eyeH, nAz = 360, maxRange = 2500) {
 
 // Fraction of ground within `range` ahead (sector +/- span/2 about heading) that is NOT visible.
 // Pattern: Apollo 16 crew could not see the floor of a crater they were standing at the rim of.
-export function hiddenGroundAhead(T, ox, oy, headingDeg, eyeH = 1.7, range = 50, spanDeg = 60) {
+export function hiddenGroundAhead(T, ox, oy, headingDeg, eyeH = 1.7, range = 50, spanDeg = 60, hazardH = 0.0) {
   let total = 0, hidden = 0, firstHidden = null;
   for (let r = 4; r <= range; r += 3) {
     const nA = Math.max(1, Math.round((r * spanDeg * RAD) / 3));
@@ -140,7 +140,7 @@ export function hiddenGroundAhead(T, ox, oy, headingDeg, eyeH = 1.7, range = 50,
       const az = (headingDeg - spanDeg / 2 + ((a + 0.5) / nA) * spanDeg) * RAD;
       const bx = ox + Math.sin(az) * r, by = oy - Math.cos(az) * r;
       if (!T.inside(bx, by)) continue;
-      const res = lineOfSight(T, ox, oy, eyeH, bx, by, 0.0);
+      const res = lineOfSight(T, ox, oy, eyeH, bx, by, hazardH);
       if (res.visible === null) continue;
       total++;
       if (!res.visible) { hidden++; if (firstHidden === null || r < firstHidden) firstHidden = r; }
@@ -173,7 +173,14 @@ export function renderPanorama(T, ox, oy, eyeH, azCenterDeg, fovDeg, W, H, sun, 
   const angMin = opts.angMin ?? -35, angMax = opts.angMax ?? 20, maxRange = opts.maxRange ?? 2500;
   const px = new Uint8ClampedArray(W * H * 4);
   const sky = [236, 205, 170];
-  for (let i = 0; i < W * H; i++) { px[i * 4] = sky[0]; px[i * 4 + 1] = sky[1]; px[i * 4 + 2] = sky[2]; px[i * 4 + 3] = 255; }
+  // sky: horizon colour at the horizon row, darker toward the zenith (cosmetic gradient; the fog target stays the horizon colour)
+  const horizonRow = Math.round(((angMax - 0) / (angMax - angMin)) * (H - 1));
+  for (let r = 0; r < H; r++) {
+    const k = r < horizonRow ? Math.pow(Math.min(1, (horizonRow - r) / Math.max(1, horizonRow)), 1.4) : 0;
+    const R = sky[0] - 52 * k, G = sky[1] - 66 * k, B = sky[2] - 56 * k;
+    for (let c = 0; c < W; c++) { const o = (r * W + c) * 4; px[o] = R; px[o + 1] = G; px[o + 2] = B; px[o + 3] = 255; }
+  }
+  const hash = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
   const z0 = T.heightAt(ox, oy) + eyeH;
   const sa = (sun.azDeg * RAD), se = (Math.max(sun.elevDeg, 0.5) * RAD);
   const L = [Math.sin(sa) * Math.cos(se), Math.cos(sa) * Math.cos(se), Math.sin(se)];
@@ -198,8 +205,10 @@ export function renderPanorama(T, ox, oy, eyeH, azCenterDeg, fovDeg, W, H, sun, 
       const g = Math.round((128 * shade) * (1 - fog) + sky[1] * fog);
       const b = Math.round((92 * shade) * (1 - fog) + sky[2] * fog);
       const rTop = Math.max(0, rowOf(Math.min(a, angMax))), rBot = Math.min(H - 1, rowOf(Math.max(maxA, angMin)));
+      const amp = d < 200 ? 0.16 : d < 800 ? 0.07 : 0.03; // hash noise hides banding from the 1 m cells in the foreground; not terrain data
       for (let rr = rTop; rr <= rBot; rr++) {
-        const o = (rr * W + c) * 4; px[o] = r; px[o + 1] = g; px[o + 2] = b;
+        const o = (rr * W + c) * 4, nz = 1 + (hash(c >> 1, rr >> 1) - 0.5) * amp;
+        px[o] = Math.min(255, r * nz); px[o + 1] = Math.min(255, g * nz); px[o + 2] = Math.min(255, b * nz);
       }
       maxA = a;
       if (a >= angMax) break;
@@ -368,4 +377,90 @@ export function planRoute(T, start, goal, o = {}) {
   pts.reverse();
   pts[0] = { x: start.x, y: start.y }; pts[pts.length - 1] = { x: goal.x, y: goal.y };
   return { points: pts, cost: dist[tK] };
+}
+
+
+// ---------- shelter reach: one-to-all walking time from a source (the habitat) ----------
+// Same pace model as planRoute: 2 km/h on level ground derated to a 5% floor at the slope limit; steep cells stay walkable at the floor
+// so every cell has a value. Returns minutes per cell on a g-metre grid and an at(x, y) lookup.
+export function costField(T, src, o = {}) {
+  const { g = 5, radius = 800, slopeLimit = 20, levelKmh = 2.0 } = o;
+  const x0 = Math.max(0, src.x - radius), y0 = Math.max(0, src.y - radius);
+  const x1 = Math.min(T.extentX, src.x + radius), y1 = Math.min(T.extentY, src.y + radius);
+  const gw = Math.floor((x1 - x0) / g), gh = Math.floor((y1 - y0) / g), N = gw * gh;
+  const slope = new Float32Array(N);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+    const sl = T.slopeDeg(x0 + (i + 0.5) * g, y0 + (j + 0.5) * g, SLOPE_BASELINE_M);
+    slope[j * gw + i] = isFinite(sl) ? sl : 90;
+  }
+  const sI = Math.max(0, Math.min(gw - 1, Math.floor((src.x - x0) / g))), sJ = Math.max(0, Math.min(gh - 1, Math.floor((src.y - y0) / g))), sK = sJ * gw + sI;
+  const dist = new Float64Array(N).fill(Infinity), done = new Uint8Array(N), heap = [];
+  const push = (c, n) => { heap.push([c, n]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+  const mps = (levelKmh * 1000) / 3600, nb = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+  dist[sK] = 0; push(0, sK);
+  while (heap.length) {
+    const [c, k] = pop();
+    if (done[k]) continue; done[k] = 1;
+    const ki = k % gw, kj = (k / gw) | 0;
+    for (const [di, dj] of nb) {
+      const ni = ki + di, nj = kj + dj;
+      if (ni < 0 || nj < 0 || ni >= gw || nj >= gh) continue;
+      const nk = nj * gw + ni; if (done[nk]) continue;
+      const sl = Math.max(slope[k], slope[nk]);
+      const w = (Math.hypot(di, dj) * g) / (mps * Math.max(0.05, 1 - Math.min(sl, slopeLimit) / slopeLimit));
+      if (c + w < dist[nk]) { dist[nk] = c + w; push(c + w, nk); }
+    }
+  }
+  const minutes = new Float32Array(N);
+  for (let k = 0; k < N; k++) minutes[k] = dist[k] / 60;
+  return { minutes, gw, gh, x0, y0, g, radius, at(x, y) { const i = Math.floor((x - x0) / g), j = Math.floor((y - y0) / g); return i < 0 || j < 0 || i >= gw || j >= gh ? Infinity : minutes[j * gw + i]; } };
+}
+
+// Minutes of usable light left from local true solar time `ltst` (hours): steps forward until the Sun is below
+// `cutoffDeg` or the spot falls into terrain shadow. Returns { min, reason } or null if the Sun is rising (morning).
+export function daylightLeftMin(T, x, y, sunAt, ltst, cutoffDeg = 5, maxMin = 600) {
+  const LTST_H_PER_EARTH_MIN = 1 / 60 / 1.0275;
+  if (ltst < 12 && sunAt(ltst).elevDeg < cutoffDeg) return null;
+  for (let m = 0; m <= maxMin; m += 5) {
+    const s = sunAt(ltst + m * LTST_H_PER_EARTH_MIN);
+    if (s.elevDeg < cutoffDeg) return { min: m, reason: "sun below " + cutoffDeg + " deg" };
+    if (m % 10 === 0 && inTerrainShadow(T, x, y, s.azDeg, s.elevDeg) === true) return { min: m, reason: "terrain shadow" };
+  }
+  return { min: maxMin, reason: "more than " + maxMin + " min" };
+}
+
+// ---------- radio line of sight (geometry only, not a link budget) ----------
+export function radioCoverage(T, rows, hab, habMastH, suitH = 1.7, perMin = null) {
+  const ok = rows.map((r) => lineOfSight(T, hab.x, hab.y, habMastH, r.x, r.y, suitH, { step: 2 }).visible === true);
+  let worst = { len: 0, from: 0, to: 0 }, cur = null;
+  rows.forEach((r, i) => {
+    if (!ok[i]) { if (!cur) cur = { from: r.s, to: r.s, i0: i, i1: i }; cur.to = r.s; cur.i1 = i; }
+    if ((ok[i] || i === rows.length - 1) && cur) { const len = cur.to - cur.from + 10; if (len > worst.len) worst = { len, from: cur.from, to: cur.to, i0: cur.i0, i1: cur.i1 }; cur = null; }
+  });
+  const gapMin = perMin && worst.len > 0 ? perMin(worst.i0, worst.i1) : null;
+  return { ok, coveredFrac: ok.filter(Boolean).length / Math.max(1, ok.length), worst, gapMin };
+}
+
+// Greedy relay siting: a relay must see the habitat mast and is scored by how many still-uncovered route samples it sees.
+export function relaySites(T, rows, hab, habMastH, o = {}) {
+  const { grid = 25, relayH = 2.5, suitH = 1.7, pad = 150, top = 3 } = o;
+  let covered = rows.map((r) => lineOfSight(T, hab.x, hab.y, habMastH, r.x, r.y, suitH, { step: 2 }).visible === true);
+  const xs = rows.map((r) => r.x), ys = rows.map((r) => r.y);
+  const bx0 = Math.max(T.cell * 2, Math.min(...xs) - pad), bx1 = Math.min(T.extentX - T.cell * 2, Math.max(...xs) + pad);
+  const by0 = Math.max(T.cell * 2, Math.min(...ys) - pad), by1 = Math.min(T.extentY - T.cell * 2, Math.max(...ys) + pad);
+  const cands = [];
+  for (let y = by0; y <= by1; y += grid) for (let x = bx0; x <= bx1; x += grid) {
+    if (lineOfSight(T, x, y, relayH, hab.x, hab.y, habMastH, { step: 2 }).visible !== true) continue;
+    cands.push({ x, y, see: rows.map((r) => lineOfSight(T, x, y, relayH, r.x, r.y, suitH, { step: 2 }).visible === true) });
+  }
+  const before = covered.filter(Boolean).length / Math.max(1, rows.length), picks = [];
+  for (let n = 0; n < top; n++) {
+    let best = null, bestGain = 0;
+    for (const c of cands) { let g = 0; for (let i = 0; i < rows.length; i++) if (!covered[i] && c.see[i]) g++; if (g > bestGain) { bestGain = g; best = c; } }
+    if (!best) break;
+    covered = covered.map((v, i) => v || best.see[i]);
+    picks.push({ x: best.x, y: best.y, gain: bestGain, coveredFrac: covered.filter(Boolean).length / Math.max(1, rows.length), dHab: Math.hypot(best.x - hab.x, best.y - hab.y) });
+  }
+  return { before, picks, candidates: cands.length };
 }

@@ -23,9 +23,12 @@ All outputs are computed from a digital elevation model (DEM) and the traverse g
 
 | Output | Question it answers |
 |---|---|
-| **Verdict** | CLEAR, CAUTION or HOLD at the current point on the route, with the reason and the walk-back time. |
+| **Verdict** | NOMINAL, CAUTION or HOLD at the current point on the route, with the reason, the fastest way home and the time to retrace the drawn route. |
 | **Visibility strip** | Along this route, where are habitat, rover, partner and landmarks in view, and where is nothing in view? |
 | **Predicted view** | What does the skyline and terrain look like from this point, looking this way, at this local solar time? A full-screen **Walker view** follows the route with the arrow keys. |
+| **Shelter reach** | A map of the fastest walking time home from the habitat, as contours every 15 minutes that bend around steep ground, with the shelter limit marked. Compared with retracing the drawn route. |
+| **Start back within** | The smallest margin among the shelter limit (during an alert), daylight (5 degree sun or terrain shadow) and suit time (EVA length minus time used and a reserve), after subtracting the fastest way home. |
+| **Radio shadow** | Where terrain blocks line of sight between the habitat mast and the suit, the longest outage in minutes of walking, and the best relay sites (greedy search). Geometry only, not a link budget. |
 | **Safety checks** | Slope against the planning limit, ground hidden ahead, low sun, terrain shadow, partner out of sight, how sensitive habitat visibility is to a position error, and a walk-back time checked against a shelter limit when a solar particle event alert is set. |
 | **Route planner** | A slope-limited route that prefers keeping the habitat in view, compared with the drawn route on length, time, steepest slope and share of the route with the habitat hidden. |
 
@@ -44,7 +47,7 @@ The **cuff card** gives the numbers a crew member would need on a wrist display:
 | At least 3 kinds of data, layered | Orbital topography (USGS Gale 1 m DEM), rover traverse (NASA MMGIS waypoints), solar geometry (Ls, local true solar time), derived slope. Surface imagery from Curiosity is used for validation. |
 | Astronaut safety first | Visibility and blind-stretch warnings, hidden-ground-ahead flag, low-sun flag, terrain shadow, slope limits, partner line of sight, and a walk-back time checked against a user-set shelter limit during a solar particle event alert. A radiation model and dust are out of scope and listed under [limitations](docs/LIMITATIONS.md). |
 | Suited mobility and obstacle avoidance | Slope-derated walking time. A planner finds a route that avoids slopes over a set limit and keeps the habitat in view, and the drawn route is checked against slope and visibility. Obstacles smaller than the DEM cell are not modeled. |
-| Point-of-view surface imagery | Predicted first-person terrain view. Compared with real Curiosity panoramas in [validation](docs/VALIDATION.md). |
+| Point-of-view surface imagery | Predicted first-person terrain view. Compared with real Curiosity Navcam frames in [validation](docs/VALIDATION.md): about 0.4 to 0.6 deg skyline error where the horizon is inside the DEM window, 3 to 6 deg too low toward a far horizon beyond it. |
 | Rovers, robots, crew pairs | Rover is a visibility target. A trailing partner at a set distance gives a lost-partner flag. |
 | Format | Browser app. Cuff card is designed for a wrist or tablet display. Nothing is mounted to the helmet. |
 
@@ -86,8 +89,8 @@ docs/           Methodology, architecture, data, validation, limitations, refere
 
 ## Status
 
-- Working: visibility core, route products, predicted view and Walker view, verdict, walk-back and shelter check, terrain shadow, position-sensitivity check, route planner, guided tour, data pipeline, 22 JS tests and a pipeline test.
-- Validation against real Curiosity panoramas: see [docs/VALIDATION.md](docs/VALIDATION.md) for protocol and current results.
+- Working: visibility core, route products, predicted view and Walker view, verdict, walk-back and shelter check, terrain shadow, position-sensitivity check, route planner, guided tour, data pipeline, 26 JS tests and a pipeline test.
+- Validation against real Curiosity panoramas: 3 stops, 7 Navcam frames, 500 skyline samples, nothing tuned. Skyline RMSE 0.43 and 0.63 deg at two stops where the skyline is terrain inside the 2.5 km window, 4.90 deg at one stop looking toward the far crater rim (model horizon too low). See [docs/VALIDATION.md](docs/VALIDATION.md). Rerun: `node validation/validate.mjs`.
 - Every threshold and height in the app is an editable assumption with its basis stated in [docs/METHODOLOGY.md](docs/METHODOLOGY.md#assumption-register). None is a measured Mars value unless stated.
 
 ## License and credits

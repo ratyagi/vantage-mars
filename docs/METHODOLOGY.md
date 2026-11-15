@@ -73,6 +73,13 @@ Walking time uses a deliberately simple model: level speed 2 km/h, derated linea
 - With the solar particle event alert switched on, the walk-back time from the current point is compared with a user-set shelter limit (default 60 min). Over the limit gives a red flag, inside it gives a caution.
 - The walk-back is the time to return along the drawn route to its start, which is the habitat in the default scene. This is a time check only. It is not a radiation dose model and it does not use any measured Mars dose rate.
 
+## 10b. Shelter reach, start-back clocks and radio shadow
+
+- `costField` runs a one-to-all Dijkstra from the habitat on a 5 m grid within 800 m, using the same slope-derated pace as the planner (2 km/h on level ground, 5 percent floor at 20 degrees, steep cells stay walkable at the floor). The result is the fastest walking time home from any cell. The map draws it as contours every 15 min, with the shelter limit in amber. The retrace time along the drawn route is shown beside it.
+- `Start back within` is the smallest of: shelter limit minus fastest return (alert on only), `daylightLeftMin` minus fastest return (steps local time forward until the Sun is below 5 degrees or the spot falls in terrain shadow; skipped before noon), and EVA length minus time already walked minus a reserve minus fastest return. Defaults: 360 min EVA, 30 min reserve. All are labeled assumptions and time clocks, not a life-support or dose model. Time used assumes continuous walking from the route start.
+- `radioCoverage` tests geometric line of sight between a 3 m habitat mast and a 1.7 m suit antenna at each route sample (2 m steps along the ray) and reports the longest outage. `relaySites` tries candidate sites on a 25 m grid, keeps those that see the habitat mast, and greedily picks the sites that cover the most uncovered samples (relay height 2.5 m). Not a link budget: no diffraction, ground reflection, Fresnel clearance or antenna pattern. Real links can work somewhat beyond geometric line of sight and can fail with marginal clearance.
+- Hidden-ground flag now tests a 0.3 m hazard within 25 m ahead (it was a 0 m target within 50 m, which flagged almost every point on the 1 m DEM).
+
 ## 11. Terrain shadow
 
 For a point, a ray is marched toward the Sun (azimuth and elevation from section 8) up to 2 km. If the terrain along the ray rises above the Sun's elevation angle, with curvature correction, the point is in terrain shadow. Sun below the horizon counts as shadow. Rays that leave the terrain window are treated as lit, which is a simplification. Object shadows below the DEM cell size are not modeled.
@@ -91,7 +98,7 @@ Without GPS, position carries error. `visibilityFraction` tests line of sight fr
 
 ## 14. Verdict
 
-The verdict is the worst state among the flags at the current point. Red (HOLD): sun below the horizon, local slope over 20 degrees, nothing used for navigation in view, partner out of sight, or walk-back over the shelter limit during an alert. Amber (CAUTION): low sun, hidden ground ahead, slope over 15 degrees, an upcoming blind stretch, terrain shadow, position-sensitive habitat visibility, or walk-back within the limit during an alert. Otherwise CLEAR. These are rules over the labeled assumptions below. They are not a certified safety determination.
+The verdict is the worst state among the flags at the current point. Red (HOLD): sun below the horizon, local slope over 20 degrees, nothing used for navigation in view, partner out of sight, or the fastest way home over the shelter limit during an alert, or no margin left on the daylight or suit clock. Amber (CAUTION): low sun, hidden ground ahead, slope over 15 degrees, an upcoming blind stretch, terrain shadow, position-sensitive habitat visibility, or walk-back within the limit during an alert. Otherwise NOMINAL (not a safety certification). These are rules over the labeled assumptions below. They are not a certified safety determination.
 
 ## Assumption register
 
@@ -106,7 +113,11 @@ The verdict is the worst state among the flags at the current point. Red (HOLD):
 | Low-sun flag | below 20 deg | Apollo-era evidence that low sun exaggerates slope | Lunar-derived, editable |
 | Slope caution / limit | 15 / 20 deg | Apollo traverses stayed under 15 deg; Artemis planning limit 20 deg | Planning figures for the Moon |
 | Walking speed | 2 km/h, derated | Artemis EVA concept of operations | Planning figure for the Moon |
-| Hidden-ground flag | above 25 percent hidden | Heuristic | Assumption |
+| Hidden-ground flag | above 25 percent of the ground within 25 m ahead hides a 0.3 m hazard | Heuristic | Assumption |
+| EVA length / suit reserve | 360 / 30 min | Placeholder; Mars PLSS studies consider 2 to 8 h EVAs | Assumption, editable |
+| Light cutoff | Sun below 5 deg or terrain shadow | Heuristic | Assumption |
+| Radio heights | mast 3 m, suit 1.7 m, relay 2.5 m | Placeholder | Assumption, editable |
+| Shelter reach grid | 5 m, radius 800 m | Compute/precision trade-off | Fixed |
 | Blind stretch minimum | 20 m | Heuristic | Assumption, editable |
 | Route sample spacing | 10 m | Compute/precision trade-off | Fixed |
 | Shelter limit (alert) | 60 min | Planning placeholder | Assumption, editable |

@@ -30,17 +30,13 @@
 
 <div id="tourbar" class="tourbar hidden"><div class="tstep" id="tStep"></div><div class="ttext" id="tText"></div><div class="tctl"><button id="tPrev" class="pill">Back</button><button id="tNext" class="pill">Next</button><button id="tEnd" class="pill">Exit tour</button></div></div>
 <div id="welcome" class="welcome"><div class="wcard">
+  <canvas id="heroPano"></canvas>
   <div class="wbrand">VANTAGE</div>
-  <h1>See what a walking astronaut can see, before they walk.</h1>
-  <p>Vantage predicts the view from every step of a Mars EVA route using 1 m NASA terrain at Gale Crater, then flags where home, the rover and the partner drop out of sight, where the sun is low, and whether the walk back still fits the shelter limit.</p>
-  <ul>
-    <li><b>Walker's-eye view.</b> 1 m terrain, not a crater-scale model.</li>
-    <li><b>Real route.</b> The Curiosity boxwork traverse, sols 4605 to 4857.</li>
-    <li><b>Safety first.</b> Slope limits, walk-back time, solar event alert, terrain shadow.</li>
-    <li><b>Plans the route.</b> Slope-limited and visibility-aware, compared with the drawn one.</li>
-  </ul>
+  <h1>Before you walk: what will you see, what will you lose, and how long to get home.</h1>
+  <p>Predicted view from every step of a real Curiosity route at Gale Crater, on 1 m NASA terrain.</p>
+  <div class="hstats" id="heroStats"></div>
   <div class="wbtn"><button id="wTour" class="primary">Take the 60 second tour</button><button id="wExplore">Explore</button></div>
-  <div class="wnote">Terrain-model predictions, not yet validated against real panoramas. Thresholds are labeled assumptions.</div>
+  <div class="wnote">Skyline checked against 3 real Curiosity stops: about 0.5 deg where the horizon is inside the 2.5 km DEM window, 3 to 6 deg too low toward far horizons. Thresholds are labeled assumptions. Advisory only.</div>
 </div></div>
 <div id="walker" class="walker hidden"><div class="wtop"><span class="wtitle">WALKER VIEW</span><span class="whint">Left / Right: walk along the route &middot; Shift + Left / Right: look around &middot; T: look along travel &middot; Esc: close</span><button id="wClose" class="pill">Close</button></div>
   <canvas id="panoBig"></canvas><div id="wHud" class="whud" data-level="ok"></div></div>
@@ -61,6 +57,12 @@
   </nav>
 
   <section class="center">
+    <div class="card cockpit">
+      <div class="cardhead"><h2>Predicted view</h2><span><span class="tag" id="panoTag"></span> <button id="btnExpand" class="pill">Walker view</button></span></div>
+      <canvas id="pano"></canvas>
+      <p class="note" id="panoNote"></p>
+    </div>
+    <div class="lower">
     <div class="mapwrap" id="mapwrap">
       <canvas id="map"></canvas>
       <div class="hover" id="hoverReadout">hover the map</div>
@@ -70,6 +72,8 @@
         <span><i class="sw view"></i>Visible from marker</span>
         <span><i class="sw s15"></i>Slope &gt; 15&deg;</span>
         <span><i class="sw s20"></i>&gt; 20&deg;</span>
+        <span><i class="sw reach"></i>Inside shelter limit</span>
+        <span><i class="sw radio"></i>Radio line of sight</span>
       </div>
     </div>
     <div class="card timeline">
@@ -83,18 +87,14 @@
       <canvas id="strip"></canvas>
       <input type="range" id="pos" min="0" max="1000" value="0" aria-label="Position along route">
     </div>
+    </div>
   </section>
 
   <aside class="side">
     <div class="verdict" id="verdict" data-level="ok">
-      <div class="vlabel" id="vLabel">CLEAR</div>
+      <div class="vlabel" id="vLabel">NOMINAL</div>
       <div class="vreason" id="vReason">Draw or load a route.</div>
       <div class="vstats" id="vStats"></div>
-    </div>
-    <div class="card">
-      <div class="cardhead"><h2>Predicted view</h2><span><span class="tag" id="panoTag"></span> <button id="btnExpand" class="pill">Walker view</button></span></div>
-      <canvas id="pano"></canvas>
-      <p class="note" id="panoNote"></p>
     </div>
 
     <div class="card hidden" id="planCard">
@@ -122,6 +122,8 @@
       <div class="field"><label for="fov">Field of view <output id="oFov"></output></label><input type="range" id="fov" min="60" max="180" value="120"></div>
       <label class="chk"><input type="checkbox" id="showView" checked> Visible area from marker</label>
       <label class="chk"><input type="checkbox" id="showSlope"> Slope overlay</label>
+      <label class="chk"><input type="checkbox" id="showReach" checked> Shelter reach: fastest way home, contour every 15 min</label>
+      <label class="chk"><input type="checkbox" id="showRadio"> Radio shadow and relay sites (geometry only)</label>
       <div id="sunReadout" class="readout"></div>
     </details>
 
@@ -138,6 +140,9 @@
         <div class="field"><label for="slopeLim">Planner slope &deg;</label><input type="number" id="slopeLim" value="20" step="1" min="5" max="35"></div>
         <div class="field"><label for="visW">Habitat view weight</label><input type="number" id="visW" value="0.5" step="0.1" min="0" max="5"></div>
         <div class="field"><label for="posErr">Position error m</label><input type="number" id="posErr" value="5" step="1" min="0" max="50"></div>
+        <div class="field"><label for="evaMin">EVA length min</label><input type="number" id="evaMin" value="360" step="30" min="60" max="600"></div>
+        <div class="field"><label for="reserveMin">Suit reserve min</label><input type="number" id="reserveMin" value="30" step="5" min="0" max="120"></div>
+        <div class="field"><label for="relayH">Relay height m</label><input type="number" id="relayH" value="2.5" step="0.5" min="1" max="10"></div>
       </div>
       <div style="padding:6px 0 0"><label class="chk"><input type="checkbox" id="sepAlert"> Solar particle event alert active (walk-back time must fit the shelter limit)</label>
       </div>

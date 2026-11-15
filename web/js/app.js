@@ -2,7 +2,7 @@ import { Terrain, makeSyntheticTerrain, hillshade } from "./terrain.js";
 import { sunPosition } from "./sun.js";
 import {
   sampleRoute, routeVisibility, blindRuns, skyline, hiddenGroundAhead,
-  viewshed, renderPanorama, walkMinutes, cumulativeWalkMinutes, inTerrainShadow, visibilityFraction, planRoute, azimuthDeg, suggestLandmarks, SLOPE_BASELINE_M,
+  viewshed, renderPanorama, costField, daylightLeftMin, radioCoverage, relaySites, walkMinutes, cumulativeWalkMinutes, inTerrainShadow, visibilityFraction, planRoute, azimuthDeg, suggestLandmarks, SLOPE_BASELINE_M,
 } from "./visibility.js";
 
 const $ = (id) => document.getElementById(id);
@@ -38,6 +38,7 @@ async function init() {
   setupMap();
   syncZoomLabel();
   recompute();
+  heroStart();
 }
 
 
@@ -48,10 +49,9 @@ async function loadValidation() {
     const d = await (await fetch("data/validation/results.json")).json();
     const f = (v, n = 2) => (+v).toFixed(n);
     const rows = d.stops.map((s) => `<tr><td>Sol ${s.sol}</td><td>${s.skyline_all.n}</td><td><b>${f(s.skyline_all.rmse_deg)}&deg;</b></td><td>${Math.round(s.skyline_all.within_1deg * 100)}%</td></tr>`).join("");
-    const good = d.stops.filter((s) => s.skyline_all.rmse_deg < 1);
-    const lo = Math.min(...good.map((s) => s.skyline_all.rmse_deg)), hi = Math.max(...good.map((s) => s.skyline_all.rmse_deg));
-    chip.textContent = `Validated: ${f(lo, 1)} to ${f(hi, 1)}\u00b0 where the horizon is in the window`;
-    chip.className = "chip real";
+    chip.textContent = "Skyline vs real Navcam: " + d.stops.map((x) => f(x.skyline_all.rmse_deg, 1)).join(" / ") + "\u00b0 at 3 stops";
+    chip.title = "RMSE of predicted vs real skyline at sols " + d.stops.map((x) => x.sol).join(", ") + ". The 4.9 deg stop looks toward a far horizon outside the model window.";
+    chip.className = "chip warn";
     box.innerHTML = `<p class="note"><b>Predicted skyline vs real Curiosity Navcam frames</b> (${d.stops.length} stops, ${d.pooled.all.n} samples, camera height 2.0 m, nothing tuned to these images).</p>
       <table class="vtab"><tr><th></th><th>n</th><th>RMSE</th><th>within 1&deg;</th></tr>${rows}</table>
       <p class="note"><b>Works:</b> when the skyline is terrain inside the 2.5 km window (foothills, nearby ridges), error is about half a degree.</p>
@@ -64,6 +64,79 @@ async function loadValidation() {
     chip.textContent = "Validation: results unavailable"; chip.className = "chip warn";
     box.innerHTML = '<p class="note">Validation results could not be loaded. Treat predictions as unvalidated.</p>';
   }
+}
+
+
+// ---------- safety layers: shelter reach, return-by clocks, radio shadow ----------
+function refreshSafety() {
+  const T = S.T, h = S.habitat;
+  if (!h) { S.reach = null; S.reachKey = ""; S.radio = null; S.relay = null; return; }
+  const hk = Math.round(h.x) + "," + Math.round(h.y);
+  if (S.reachKey !== hk) { S.reach = costField(T, h); S.reachKey = hk; S.reachImg = null; }
+  if (S.rows.length > 1) {
+    const habH = +$("habH").value;
+    S.radio = radioCoverage(T, S.rows, h, habH, 1.7, (a, b) => (S.cum[b] || 0) - (S.cum[a] || 0) + 0.3);
+    const rk = [hk, habH, +$("relayH").value, S.rows.length, Math.round(S.rows[0].x), Math.round(S.rows[S.rows.length - 1].x), Math.round(S.rows[S.rows.length >> 1].y)].join("|");
+    if (S.relayKey !== rk) { S.relay = relaySites(T, S.rows, h, habH, { relayH: +$("relayH").value, grid: 25 }); S.relayKey = rk; }
+  } else { S.radio = null; S.relay = null; S.relayKey = ""; }
+}
+function returnMin(cur) { return S.reach && cur ? S.reach.at(cur.x, cur.y) : null; }
+// Smallest slack among the clocks that apply here. All are time clocks on assumed numbers, not a dose or life-support model.
+function startBack(cur) {
+  const ret = returnMin(cur);
+  if (ret === null || !isFinite(ret)) return null;
+  const idx = S.rows.indexOf(cur), used = S.cum && S.cum.length && idx >= 0 ? S.cum[idx] : 0;
+  const items = [];
+  if ($("sepAlert").checked) items.push({ k: "shelter limit", min: +$("shelterMin").value - ret });
+  const lat = S.T?.meta?.window_center_lonlat?.[1] ?? -4.8, ls = +$("ls").value;
+  const day = daylightLeftMin(S.T, cur.x, cur.y, (h) => sunPosition(lat, ls, h), +$("ltst").value);
+  if (day) items.push({ k: day.reason.startsWith("terrain") ? "terrain shadow" : "daylight", min: day.min - ret });
+  items.push({ k: "suit time", min: +$("evaMin").value - used - +$("reserveMin").value - ret });
+  items.sort((a, b) => a.min - b.min);
+  return { ret, used, limiting: items[0], items };
+}
+function reachImage() {
+  const R = S.reach; if (!R) return null;
+  const lim = +$("shelterMin").value, key = S.reachKey + "|" + lim;
+  if (S.reachImg && S.reachImgKey === key) return S.reachImg;
+  const cv = document.createElement("canvas"); cv.width = R.gw; cv.height = R.gh;
+  const cx = cv.getContext("2d"), id = cx.createImageData(R.gw, R.gh), D = id.data;
+  for (let j = 0; j < R.gh; j++) for (let i = 0; i < R.gw; i++) {
+    const k = j * R.gw + i, m = R.minutes[k];
+    if (!isFinite(m) || Math.hypot((i + 0.5) * R.g - (S.habitat.x - R.x0), (j + 0.5) * R.g - (S.habitat.y - R.y0)) > R.radius * 0.97) continue;
+    const mr = i + 1 < R.gw ? R.minutes[k + 1] : m, md = j + 1 < R.gh ? R.minutes[k + R.gw] : m;
+    let r, g, b, a;
+    if (m <= lim) { r = 76; g = 201; b = 160; a = 36; } else { r = 239; g = 91; b = 91; a = 48; }
+    if (Math.floor(m / 15) !== Math.floor(mr / 15) || Math.floor(m / 15) !== Math.floor(md / 15)) { r = g = b = 255; a = 120; }
+    if ((m <= lim) !== (mr <= lim) || (m <= lim) !== (md <= lim)) { r = 245; g = 185; b = 74; a = 255; }
+    const o = k * 4; D[o] = r; D[o + 1] = g; D[o + 2] = b; D[o + 3] = a;
+  }
+  cx.putImageData(id, 0, 0);
+  S.reachImg = cv; S.reachImgKey = key; return cv;
+}
+function drawReach() {
+  const cv = reachImage(), R = S.reach; if (!cv) return;
+  const [ax, ay] = toPx(R.x0, R.y0), [bx, by] = toPx(R.x0 + R.gw * R.g, R.y0 + R.gh * R.g);
+  mctx.imageSmoothingEnabled = true; mctx.drawImage(cv, ax, ay, bx - ax, by - ay);
+}
+function drawRadioLayer() {
+  const v = S.rvs;
+  if (v) {
+    mctx.fillStyle = "rgba(150,135,255,.15)";
+    for (let j = 0; j < v.gh; j++) for (let i = 0; i < v.gw; i++) {
+      if (v.grid[j * v.gw + i] !== 1) continue;
+      const [a, b] = toPx(v.x0 + i * v.cellM, v.y0 + j * v.cellM);
+      mctx.fillRect(a, b, v.cellM * view.px + 0.6, v.cellM * view.px + 0.6);
+    }
+  }
+}
+function drawRadioRoute() {
+  if (!S.radio || S.rows.length < 2) return;
+  const d = view.dpr || 1; mctx.save(); mctx.strokeStyle = "#9687ff"; mctx.lineWidth = 7 * d; mctx.lineCap = "round"; mctx.setLineDash([2 * d, 7 * d]);
+  let open = false; mctx.beginPath();
+  S.rows.forEach((p, i) => { const [a, b] = toPx(p.x, p.y); if (!S.radio.ok[i]) { open ? mctx.lineTo(a, b) : mctx.moveTo(a, b); open = true; } else open = false; });
+  mctx.stroke(); mctx.restore();
+  (S.relay?.picks || []).forEach((r, i) => marker(r, "R" + (i + 1), "#b9a8ff"));
 }
 
 // ---------- map ----------
@@ -119,13 +192,16 @@ function drawMap() {
   mctx.imageSmoothingEnabled = true;
   const V = S.view, cell = T.cell;
   mctx.drawImage(S.hs, V.x0 / cell, V.y0 / cell, V.size / cell, V.size / cell, 0, 0, view.W, view.H);
+  if ($("showReach").checked && S.reach) drawReach();
   if ($("showSlope").checked) drawSlope();
+  if ($("showRadio").checked) drawRadioLayer();
   if ($("showView").checked && S.vs) drawViewshed();
   if (S.planned) {
     mctx.save(); mctx.setLineDash([8, 6]); mctx.strokeStyle = "#4cc9d8"; mctx.lineWidth = 2.5; mctx.beginPath();
     S.planned.forEach((p, i) => { const [x, y] = toPx(p.x, p.y); i ? mctx.lineTo(x, y) : mctx.moveTo(x, y); });
     mctx.stroke(); mctx.restore();
   }
+  if ($("showRadio").checked) drawRadioRoute();
   // route with blind runs
   if (S.rows.length > 1) {
     mctx.lineWidth = 3 * (view.dpr || 1); mctx.lineJoin = "round"; mctx.strokeStyle = "#fff"; mctx.beginPath();
@@ -229,6 +305,7 @@ function recompute() {
   const opts = { eyeH: +$("eyeH").value, partnerGap: +$("partnerGap").value };
   S.rows = S.route.length > 1 ? routeVisibility(T, sampleRoute(S.route, 10), targets(), opts) : [];
   S.cum = S.rows.length ? cumulativeWalkMinutes(S.T, S.rows) : [];
+  refreshSafety();
   S.runs = S.rows.length ? blindRuns(S.rows, targets(), +$("blindMin").value) : [];
   $("oLtst").textContent = (+$("ltst").value).toFixed(2);
   $("oLs").textContent = $("ls").value;
@@ -240,6 +317,8 @@ function recompute() {
 function scheduleViewshed() {
   clearTimeout(S.vsTimer);
   S.vsTimer = setTimeout(() => {
+    S.rvs = null;
+    if ($("showRadio").checked && S.habitat) { const V0 = S.view, st0 = Math.max(1, Math.round(V0.size / S.T.cell / 170)); S.rvs = viewshed(S.T, S.habitat.x, S.habitat.y, +$("habH").value, 1.7, st0, 2500, { x0: V0.x0, y0: V0.y0, x1: V0.x0 + V0.size, y1: V0.y0 + V0.size }); }
     const c = currentSample();
     if (!c || !$("showView").checked) { S.vs = null; drawMap(); return; }
     const V = S.view, stride = Math.max(1, Math.round(V.size / S.T.cell / 170));
@@ -268,14 +347,14 @@ function drawStrip() {
   const tg = targets(), n = S.rows.length, total = S.rows[n - 1].s;
   const left = 84, rowH = 14, gap = 4, top = 10, W = cw - left - 12;
   const X = (s) => left + (s / total) * W;
-  const lines = [...tg.map((t) => ({ id: t.id, label: t.name })), { id: "__p", label: "Partner" }];
+  const lines = [...tg.map((t) => ({ id: t.id, label: t.name })), { id: "__p", label: "Partner" }, ...(S.radio ? [{ id: "__r", label: "Radio to hab" }] : [])];
   ctx.textAlign = "right";
   lines.forEach((ln, k) => {
     const y = top + k * (rowH + gap);
     ctx.fillStyle = "#8b95a4"; ctx.fillText(ln.label.slice(0, 13), left - 8, y + 11);
     for (let i = 0; i < n - 1; i++) {
-      const v = ln.id === "__p" ? S.rows[i].partner?.visible : S.rows[i].vis[ln.id]?.visible;
-      ctx.fillStyle = v === true ? "#2e9e78" : v === false ? "#b4454a" : "#2a313b";
+      const v = ln.id === "__p" ? S.rows[i].partner?.visible : ln.id === "__r" ? S.radio.ok[i] : S.rows[i].vis[ln.id]?.visible;
+      ctx.fillStyle = v === true ? "#2e9e78" : v === false ? (ln.id === "__r" ? "#6b5fb4" : "#b4454a") : "#2a313b";
       ctx.fillRect(X(S.rows[i].s), y, Math.max(1, X(S.rows[i + 1].s) - X(S.rows[i].s) + 0.6), rowH);
     }
   });
@@ -300,7 +379,7 @@ function drawStrip() {
 // ---------- panorama ----------
 function drawPano(big) {
   if (big === true) return drawPanoOn($("panoBig"), 2.4);
-  drawPanoOn($("pano"), 3.2);
+  drawPanoOn($("pano"), 3.6);
   if (!$("walker").classList.contains("hidden")) { drawPanoOn($("panoBig"), 2.4); walkerHud(); }
 }
 function drawPanoOn(c, ratio) {
@@ -326,35 +405,47 @@ function drawPanoOn(c, ratio) {
   // sun marker
   if (sun.elevDeg > p.angMin && sun.elevDeg < p.angMax) {
     const sx = colOf(sun.azDeg);
-    if (sx > 0 && sx < CW) { ctx.fillStyle = "#fff3c4"; ctx.beginPath(); ctx.arc(sx, rowOfA(sun.elevDeg), 5, 0, 7); ctx.fill(); }
+    if (sx > -80 && sx < CW + 80) {
+      const sy = rowOfA(sun.elevDeg), gr = ctx.createRadialGradient(sx, sy, 2, sx, sy, 120);
+      gr.addColorStop(0, "rgba(255,244,200,.55)"); gr.addColorStop(1, "rgba(255,244,200,0)");
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = gr; ctx.fillRect(sx - 120, sy - 120, 240, 240); ctx.restore();
+      ctx.fillStyle = "#fff8dc"; ctx.beginPath(); ctx.arc(sx, sy, 4, 0, 7); ctx.fill();
+    }
   }
-  // compass band
-  const g = ctx.createLinearGradient(0, 0, 0, 22); g.addColorStop(0, "rgba(8,10,13,.85)"); g.addColorStop(1, "rgba(8,10,13,0)");
-  ctx.fillStyle = g; ctx.fillRect(0, 0, CW, 22);
-  ctx.textAlign = "center";
+  // compass tape
+  const g = ctx.createLinearGradient(0, 0, 0, 30); g.addColorStop(0, "rgba(8,10,13,.8)"); g.addColorStop(1, "rgba(8,10,13,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, CW, 30);
+  ctx.textAlign = "center"; ctx.font = "600 11px Inter, system-ui, sans-serif"; ctx.lineJoin = "round";
   const names = { 0: "N", 45: "NE", 90: "E", 135: "SE", 180: "S", 225: "SW", 270: "W", 315: "NW" };
-  for (let a = Math.ceil((az - fov / 2) / 15) * 15; a <= az + fov / 2; a += 15) {
+  const lbl = (t, x, y, col) => { ctx.lineWidth = 3; ctx.strokeStyle = "rgba(8,10,13,.85)"; ctx.strokeText(t, x, y); ctx.fillStyle = col; ctx.fillText(t, x, y); };
+  for (let a = Math.ceil((az - fov / 2) / 5) * 5; a <= az + fov / 2; a += 5) {
     const deg = ((a % 360) + 360) % 360, x = colOf(deg);
-    ctx.strokeStyle = "rgba(231,234,239,.6)"; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, deg % 45 === 0 ? 8 : 5); ctx.stroke();
-    if (deg % 45 === 0) { ctx.fillStyle = "#e7eaef"; ctx.fillText(names[deg], x, 19); }
-    else if (fov <= 120) { ctx.fillStyle = "#8b95a4"; ctx.fillText(deg, x, 17); }
+    ctx.strokeStyle = "rgba(231,234,239,.7)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, deg % 15 === 0 ? 8 : 4); ctx.stroke();
+    if (deg % 45 === 0) lbl(names[deg], x, 21, "#fff");
+    else if (deg % 15 === 0 && fov <= 140) lbl(String(deg), x, 20, "#cfd6e0");
   }
-  // targets
-  let k = 0;
+  ctx.strokeStyle = "#4cc9d8"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(CW / 2, 0); ctx.lineTo(CW / 2 - 4, 7); ctx.lineTo(CW / 2 + 4, 7); ctx.closePath(); ctx.fillStyle = "#4cc9d8"; ctx.fill();
+  // targets: labels are pushed up when they would overlap the previous one
+  ctx.font = "11px Inter, system-ui, sans-serif";
+  const items = [];
   for (const t of targets()) {
     const v = cur.vis[t.id]; if (!v) continue;
-    const stag = (k++ % 3) * 15;
     const x = colOf(v.bearing); if (x < 0 || x > CW) continue;
     const baseA = Math.atan2(S.T.heightAt(t.x, t.y) - (S.T.heightAt(cur.x, cur.y) + +$("eyeH").value), v.dist) * 180 / Math.PI;
     const topA = baseA + (Math.atan2(t.h, v.dist) * 180 / Math.PI);
-    const y = rowOfA(topA);
-    const col = v.visible ? "#5fd39a" : "#ef5b5b";
-    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y - 3); ctx.lineTo(x - 4, y - 10); ctx.lineTo(x + 4, y - 10); ctx.closePath(); ctx.fill();
-    const label = `${t.short || t.name} ${v.dist.toFixed(0)} m`;
-    const ty = Math.max(34, y - 14 - stag), tw = ctx.measureText(label).width + 10;
-    const lx = Math.max(tw / 2 + 2, Math.min(CW - tw / 2 - 2, x));
+    items.push({ t, v, x, y: rowOfA(topA), label: `${t.short || t.name} ${v.dist.toFixed(0)} m` });
+  }
+  items.sort((a1, b1) => a1.x - b1.x);
+  const placed = [];
+  for (const it of items) {
+    const col = it.v.visible ? "#5fd39a" : "#ef5b5b";
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(it.x, it.y - 3); ctx.lineTo(it.x - 4, it.y - 10); ctx.lineTo(it.x + 4, it.y - 10); ctx.closePath(); ctx.fill();
+    const tw = ctx.measureText(it.label).width + 10, lx = Math.max(tw / 2 + 2, Math.min(CW - tw / 2 - 2, it.x));
+    let ty = Math.max(44, it.y - 14);
+    for (let guard = 0; guard < 8; guard++) { const hit = placed.find((q) => Math.abs(q.lx - lx) < (q.tw + tw) / 2 + 2 && Math.abs(q.ty - ty) < 17); if (!hit) break; ty = hit.ty - 17; if (ty < 44) ty = Math.max(it.y + 18, hit.ty + 17); }
+    placed.push({ lx, tw, ty });
     ctx.fillStyle = "rgba(8,10,13,.8)"; ctx.fillRect(lx - tw / 2, ty - 11, tw, 15);
-    ctx.fillStyle = col; ctx.fillText(label, lx, ty);
+    ctx.fillStyle = col; ctx.fillText(it.label, lx, ty);
   }
   const bar = `az ${az.toFixed(0)}\u00b0   fov ${fov}\u00b0   sun ${sun.elevDeg.toFixed(1)}\u00b0   eye ${$("eyeH").value} m`;
   ctx.fillStyle = "rgba(8,10,13,.75)"; ctx.fillRect(0, CH - 18, CW, 18);
@@ -374,8 +465,8 @@ function flags() {
   const sun = sunNow(), thr = +$("thrSun").value;
   if (sun.elevDeg < 0) add("bad", "Sun is below the horizon at this time.", "geometry");
   else if (sun.elevDeg < thr) add("warn", `Low sun (${sun.elevDeg.toFixed(1)} deg, below ${thr} deg): slopes and shadows are easy to misjudge.`, "lunar-derived threshold, assumption");
-  const h = hiddenGroundAhead(S.T, cur.x, cur.y, cur.heading, +$("eyeH").value, 50, 60);
-  if (h.hiddenFraction > 0.25) add("warn", `Ground ahead is hidden: ${(h.hiddenFraction * 100).toFixed(0)}% of the 50 m cone, first hidden at ${h.firstHiddenDist} m.`, "geometry, Apollo 16 pattern");
+  const h = hiddenGroundAhead(S.T, cur.x, cur.y, cur.heading, +$("eyeH").value, 25, 60, 0.3);
+  if (h.hiddenFraction > 0.25) add("warn", `A 0.3 m hazard would be hidden on ${(h.hiddenFraction * 100).toFixed(0)}% of the ground within 25 m ahead, first at ${h.firstHiddenDist} m.`, "geometry, Apollo 16 pattern, assumed hazard height");
   const sl = S.T.slopeDeg(cur.x, cur.y, SLOPE_BASELINE_M);
   if (sl > 20) add("bad", `Local slope ${sl.toFixed(0)} deg exceeds the 20 deg Artemis planning limit.`, "planning figure for the Moon");
   else if (sl > 15) add("warn", `Local slope ${sl.toFixed(0)} deg.`, "planning figure for the Moon");
@@ -389,11 +480,19 @@ function flags() {
     if (f !== null && f > 0 && f < 1) add("warn", `Habitat visibility here depends on position: ${(f * 100).toFixed(0)}% of points within ${$("posErr").value} m see it.`, "position-error sensitivity, assumed error");
   }
   const wb = S.cum && S.cum.length ? S.cum[S.rows.indexOf(cur)] : null;
-  if (wb !== null && wb !== undefined) {
-    const lim = +$("shelterMin").value;
-    if ($("sepAlert").checked && wb > lim) add("bad", `SEP alert: walk-back along the route is ${wb.toFixed(0)} min, over the ${lim} min shelter limit.`, "assumed pace and limit, not a radiation model");
-    else if ($("sepAlert").checked) add("warn", `SEP alert: walk-back ${wb.toFixed(0)} min of ${lim} min limit.`, "assumed pace and limit");
+  const sb = startBack(cur), lim = +$("shelterMin").value;
+  const ret = sb ? sb.ret : wb;
+  if ($("sepAlert").checked && ret !== null && ret !== undefined && isFinite(ret)) {
+    const alt = wb !== null && wb !== undefined && sb ? ` Retracing the drawn route would take ${wb.toFixed(0)} min.` : "";
+    if (ret > lim) add("bad", `SEP alert: the fastest way home takes ${ret.toFixed(0)} min, over the ${lim} min shelter limit.${alt}`, "assumed pace and limit, not a radiation model");
+    else add("warn", `SEP alert: the fastest way home takes ${ret.toFixed(0)} min of the ${lim} min limit.${alt}`, "assumed pace and limit");
   }
+  if (sb && sb.limiting.k !== "shelter limit") {
+    const m = sb.limiting.min;
+    if (m < 0) add("bad", `No margin: ${sb.limiting.k} runs out before you can get home. Start back now.`, "assumed EVA length, reserve, light cutoff 5 deg");
+    else if (m < 30) add("warn", `Start back within ${m.toFixed(0)} min (limited by ${sb.limiting.k}).`, "assumed EVA length, reserve, light cutoff 5 deg");
+  }
+  if (S.radio && S.rows.indexOf(cur) >= 0 && !S.radio.ok[S.rows.indexOf(cur)]) add("", `No radio line of sight to the habitat here (terrain). Longest outage on this route: ${S.radio.worst.len.toFixed(0)} m${S.radio.gapMin ? ", about " + S.radio.gapMin.toFixed(0) + " min of walking" : ""}.`, "geometry only, not a link budget");
   for (const r of S.runs) add("warn", `Blind stretch ${r.from.toFixed(0)} to ${r.to.toFixed(0)} m (${r.length.toFixed(0)} m).`, "geometry over DEM");
   if (!ul.children.length) add("ok", "No flags at this position and time.", "unvalidated");
   verdict(worst, why, cur);
@@ -402,14 +501,15 @@ function flags() {
 function verdict(worst, why, cur) {
   const v = $("verdict"), lvl = ["ok", "warn", "bad"][worst];
   v.dataset.level = lvl;
-  $("vLabel").textContent = ["CLEAR", "CAUTION", "HOLD"][worst];
+  $("vLabel").textContent = ["NOMINAL", "CAUTION", "HOLD"][worst];
   $("vReason").textContent = worst ? why : "Home or a landmark is in view, slope and sun are within the assumed limits.";
   if (!cur) { $("vStats").innerHTML = ""; return; }
   const wb = S.cum && S.cum.length ? S.cum[S.rows.indexOf(cur)] : null;
   const sun = sunNow();
   const hab = S.habitat ? Math.hypot(cur.x - S.habitat.x, cur.y - S.habitat.y) : null;
   const st = (l, v2) => `<div>${l}<b>${v2}</b></div>`;
-  $("vStats").innerHTML = st("Walk-back", wb === null || wb === undefined ? "--" : wb.toFixed(0) + " min") + st("To habitat", hab === null ? "--" : hab.toFixed(0) + " m") + st("Sun", sun.elevDeg.toFixed(0) + "\u00b0");
+  const sb = startBack(cur);
+  $("vStats").innerHTML = st("Home, fastest", sb ? sb.ret.toFixed(0) + " min" : "--") + st("Retrace route", wb === null || wb === undefined ? "--" : wb.toFixed(0) + " min") + st("To habitat", hab === null ? "--" : hab.toFixed(0) + " m") + st("Sun", sun.elevDeg.toFixed(0) + "\u00b0");
 }
 
 // ---------- cuff card ----------
@@ -420,7 +520,7 @@ function cuff() {
   const maxSl = Math.max(...ahead.map((r) => S.T.slopeDeg(r.x, r.y, SLOPE_BASELINE_M)).filter(isFinite), 0);
   const nextBlind = S.runs.find((r) => r.to >= cur.s);
   const hab = S.habitat ? Math.hypot(cur.x - S.habitat.x, cur.y - S.habitat.y) : null;
-  const sun = sunNow(), thr = +$("thrSun").value;
+  const sun = sunNow(), thr = +$("thrSun").value, sb = startBack(cur);
   const kpi = (cls, l, v, u, s) => `<div class="kpi ${cls}"><div class="l">${l}</div><div class="v">${v}<small> ${u}</small></div><div class="s">${s || ""}</div></div>`;
   b.innerHTML =
     kpi("", "Heading", cur.heading.toFixed(0), "\u00b0", "travel direction") +
@@ -428,7 +528,9 @@ function cuff() {
     kpi(maxSl > 20 ? "bad" : maxSl > 15 ? "warn" : "", "Max slope", maxSl.toFixed(0), "\u00b0", "next 120 m") +
     (nextBlind ? kpi("warn", "Blind stretch", Math.max(0, nextBlind.from - cur.s).toFixed(0), "m ahead", nextBlind.length.toFixed(0) + " m long") : kpi("ok", "Blind stretch", "none", "", "next 120 m")) +
     kpi(sun.elevDeg < thr ? "warn" : "", "Sun elevation", sun.elevDeg.toFixed(0), "\u00b0", sun.elevDeg < thr ? "low sun" : "ok") +
-    (S.cum && S.cum.length ? kpi($("sepAlert").checked && S.cum[S.rows.indexOf(cur)] > +$("shelterMin").value ? "bad" : "", "Walk-back", S.cum[S.rows.indexOf(cur)].toFixed(0), "min", "along route to start") : "") +
+    (sb ? kpi($("sepAlert").checked && sb.ret > +$("shelterMin").value ? "bad" : "", "Home, fastest", sb.ret.toFixed(0), "min", "retrace route " + (S.cum && S.cum.length ? S.cum[S.rows.indexOf(cur)].toFixed(0) : "--") + " min") : "") +
+    (sb ? kpi(sb.limiting.min < 0 ? "bad" : sb.limiting.min < 30 ? "warn" : "ok", "Start back within", Math.max(0, sb.limiting.min).toFixed(0), "min", "limited by " + sb.limiting.k) : "") +
+    (S.radio ? kpi(S.radio.worst.len > 0 ? "warn" : "ok", "Longest radio gap", S.radio.worst.len.toFixed(0), "m", (S.radio.gapMin ? S.radio.gapMin.toFixed(0) + " min walking" : "none") + (S.relay?.picks?.length ? ", relay R1 closes " + Math.round((S.relay.picks[0].coveredFrac - S.relay.before) * 100) + "% of the route" : "")) : "") +
     kpi("", "Walk time", S.rows.length ? walkMinutes(S.T, S.rows).toFixed(0) : "--", "min", "assumed pace") +
     `<div class="cuffnote">Unvalidated terrain-model prediction.</div>`;
 }
@@ -499,7 +601,7 @@ function bind() {
     fitView(); setupMap(); recompute();
   };
   for (const id of ["pos", "ltst", "ls", "lookMode", "lookAz", "fov"]) $(id).addEventListener("input", () => { if (id === "ltst" || id === "ls") drawHillshade(); recompute(); });
-  for (const id of ["eyeH", "partnerGap", "landH", "habH", "thrSun", "blindMin", "showView", "showSlope", "sepAlert", "shelterMin", "posErr"]) $(id).addEventListener("input", recompute);
+  for (const id of ["eyeH", "partnerGap", "landH", "habH", "thrSun", "blindMin", "showView", "showSlope", "showReach", "showRadio", "evaMin", "reserveMin", "relayH", "sepAlert", "shelterMin", "posErr"]) $(id).addEventListener("input", recompute);
   map.addEventListener("mousemove", (ev) => {
     const p = pickXY(ev), z = S.T.heightAt(p.x, p.y), sl = S.T.slopeDeg(p.x, p.y);
     $("hoverReadout").textContent = S.T.inside(p.x, p.y) ? `E ${p.x.toFixed(0)} m  S ${p.y.toFixed(0)} m   elev ${isFinite(z) ? z.toFixed(1) : "--"} m   slope ${isFinite(sl) ? sl.toFixed(1) : "--"}\u00b0` : "outside window";
@@ -561,13 +663,39 @@ window.addEventListener("keydown", (e) => {
 });
 window.addEventListener("resize", () => { if (!$("walker").classList.contains("hidden")) drawPano(); });
 
+
+// ---------- welcome hero: a live view and three numbers computed from the loaded route ----------
+let heroTimer = null, heroPos0 = 0;
+function heroStats() {
+  const box = $("heroStats"); if (!box || !S.rows.length) return;
+  const noHab = S.habitat ? S.rows.filter((r) => r.vis.hab && r.vis.hab.visible === false).length / S.rows.length : null;
+  const rets = S.reach ? S.rows.map((r) => S.reach.at(r.x, r.y)).filter(isFinite) : [];
+  const retHi = rets.length ? Math.round(Math.max(...rets)) : null;
+  const retrace = S.cum.length ? Math.round(S.cum[S.cum.length - 1]) : null;
+  const st = (b, t) => `<div class="hstat"><b>${b}</b>${t}</div>`;
+  box.innerHTML = st(noHab !== null ? Math.round(noHab * 100) + "%" : "--", "of this route is out of sight of the habitat") +
+    st(S.radio ? Math.round((1 - S.radio.coveredFrac) * 100) + "%" : "--", "has no radio line of sight to the habitat (geometry only)") +
+    st(retHi !== null ? "up to " + retHi + " min" : "--", "fastest way home along the route" + (retrace ? ", against " + retrace + " min retracing it" : ""));
+}
+function heroStart() {
+  if (!S.rows.length || !$("heroPano")) return;
+  heroPos0 = +$("pos").value; heroStats();
+  const first = S.runs[0]; const tot = S.rows[S.rows.length - 1].s;
+  let p = first ? Math.max(0, ((first.from - 40) / tot) * 1000) : 350;
+  clearInterval(heroTimer);
+  const frame = () => { $("pos").value = Math.round(p); drawPanoOn($("heroPano"), 2.8); p += 2.5; if (p > 960) p = 20; };
+  frame(); heroTimer = setInterval(frame, 140);
+}
+function heroStop() { clearInterval(heroTimer); heroTimer = null; $("pos").value = heroPos0; recompute(); }
+
 // ---------- guided tour ----------
 const TOUR = [
   { t: "Real Curiosity boxwork route on 1 m NASA terrain. The verdict, predicted view and timeline update at every step.", go: () => setPos(0) },
   { t: "A blind stretch: from here the habitat, rover and summits are all out of sight. This is where an astronaut has nothing to navigate by.", go: () => { const r = S.runs[0] || null; const tot = S.rows.length ? S.rows[S.rows.length - 1].s : 1; setPos(r ? ((r.from + r.length / 2) / tot) * 1000 : 400); } },
   { t: "Walker view: the full-screen predicted view from the walker's eye height, with the verdict underneath. Arrow keys walk the route.", go: () => { walkerOpen(); } },
   { t: "Same spot, low sun (about 06:30 local time). Slopes and shadows flatten out and the flags warn about it.", go: () => { $("ltst").value = 6.5; drawHillshade(); recompute(); } },
-  { t: "Solar particle event alert. Far from the start, the walk back no longer fits the shelter limit, so the verdict goes to HOLD.", go: () => { $("ltst").value = TOURSTATE.ltst; drawHillshade(); $("sepAlert").checked = true; $("shelterMin").value = 30; setPos(850); } },
+  { t: () => `Solar particle event alert with a 20 minute shelter limit. The contours show the fastest way home, bending around steep ground. From here it takes ${(returnMin(currentSample()) || 0).toFixed(0)} min, over the limit, so the verdict is HOLD. Retracing the drawn route would take ${(S.cum[S.rows.indexOf(currentSample())] || 0).toFixed(0)} min.`, go: () => { $("sepAlert").checked = true; $("shelterMin").value = 20; setPos(950); } },
+  { t: () => S.radio && S.relay?.picks?.length ? `Radio shadow: terrain blocks line of sight to the habitat on ${Math.round((1 - S.radio.coveredFrac) * 100)}% of the route, up to ${S.radio.worst.len.toFixed(0)} m in a row. One relay at R1 (${S.relay.picks[0].dHab.toFixed(0)} m from the habitat) would cover ${Math.round(S.relay.picks[0].coveredFrac * 100)}%. Geometry only, not a link budget.` : "Radio shadow: where terrain blocks line of sight to the habitat.", go: () => { $("showRadio").checked = true; setPos(800); } },
   { t: "The planner finds a slope-limited route that keeps the habitat in view and compares it with the drawn one.", go: () => { $("sepAlert").checked = false; $("shelterMin").value = 60; setPos(300); $("btnPlan").click(); } },
   { t: "Checked against real Curiosity camera frames: about 0.5 degrees of skyline error where the horizon is inside the model window, and 3 to 6 degrees low toward the far crater rim. Both numbers are on the page.", go: () => { setPos(0); const p = $("valPanel"); const d = p && p.closest("details"); if (d) d.open = true; if (p) p.scrollIntoView({ block: "center" }); } },
 ];
@@ -578,10 +706,12 @@ function tourShow(i) {
   tourI = Math.max(0, Math.min(TOUR.length - 1, i));
   $("tourbar").classList.remove("hidden");
   $("tStep").textContent = `${tourI + 1} / ${TOUR.length}`;
-  $("tText").textContent = TOUR[tourI].t;
   $("tNext").textContent = tourI === TOUR.length - 1 ? "Finish" : "Next";
   walkerClose();
+  $("ltst").value = TOURSTATE.ltst; $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false;
+  drawHillshade();
   TOUR[tourI].go();
+  const tt = TOUR[tourI].t; $("tText").textContent = typeof tt === "function" ? tt() : tt;
 }
 function tourStart() {
   TOURSTATE.ltst = +$("ltst").value;
@@ -592,14 +722,14 @@ function tourStart() {
 function tourEnd() {
   walkerClose();
   $("tourbar").classList.add("hidden"); tourI = -1;
-  $("ltst").value = TOURSTATE.ltst; drawHillshade(); $("sepAlert").checked = false; $("shelterMin").value = 60; recompute();
+  $("ltst").value = TOURSTATE.ltst; drawHillshade(); $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false; recompute();
 }
-$("wTour").onclick = tourStart;
-$("wExplore").onclick = () => $("welcome").classList.add("hidden");
+$("wTour").onclick = () => { heroStop(); tourStart(); };
+$("wExplore").onclick = () => { heroStop(); $("welcome").classList.add("hidden"); };
 $("btnTour").onclick = tourStart;
 $("tPrev").onclick = () => tourShow(tourI - 1);
 $("tNext").onclick = () => (tourI >= TOUR.length - 1 ? tourEnd() : tourShow(tourI + 1));
 $("tEnd").onclick = tourEnd;
-window.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("welcome").classList.add("hidden"); if (tourI >= 0) tourEnd(); } });
+window.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (heroTimer) heroStop(); $("welcome").classList.add("hidden"); if (tourI >= 0) tourEnd(); } });
 
 init();

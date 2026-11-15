@@ -18,6 +18,8 @@ Stated plainly so results are read correctly.
 - **Walking speed** is a lunar planning figure with a simple slope derate. Suited metabolic cost on Mars terrain is not modeled.
 - **Radiation dose, dust storms, thermal limits, consumables** are out of scope. Radiation shielding by terrain was measured at one Mars site and is small there, so terrain should not be treated as shelter. This tool addresses navigation and awareness, not the full EVA hazard set.
 - **Planner scope.** The route planner uses the same assumed pace and slope limit, a 5 m grid, and treats the habitat as the only visibility goal. It does not model boulders, soil strength, energy use or consumables, and it does not choose science stops.
+- **Shelter reach and clocks** use the same assumed pace as everything else, assume the astronaut walks continuously from the route start, and ignore carrying, rest, suit mobility and any radiation dose. Contours stop at 800 m from the habitat.
+- **Radio shadow** is geometric line of sight only. It ignores diffraction, ground reflection, Fresnel clearance, antenna pattern and any relay hardware. Relay sites are a siting aid, not a link design.
 - **Solar particle event check** is a walk-back time against a user-set limit. It is not a radiation model and uses no measured Mars dose rates.
 - **Terrain shadow** is cast by the DEM only, rays leaving the window count as lit, and objects below the DEM cell size cast no shadow.
 - **Position uncertainty** uses an assumed error radius, not a measured navigation error.
