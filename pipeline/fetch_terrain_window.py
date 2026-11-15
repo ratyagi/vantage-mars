@@ -41,7 +41,7 @@ def load_json(src, cache_path=None):
     if os.path.exists(src):
         with open(src, "r", encoding="utf-8") as f:
             return json.load(f)
-    req = urllib.request.Request(src, headers={"User-Agent": "sightline-mars/0.1"})
+    req = urllib.request.Request(src, headers={"User-Agent": "vantage-mars/0.1"})
     with urllib.request.urlopen(req, timeout=60) as r:
         raw = r.read()
     if cache_path:

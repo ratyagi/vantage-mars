@@ -4,8 +4,9 @@ Stated plainly so results are read correctly.
 
 ## Terrain data
 - **Resolution.** The DEM cell is 1 m. Features smaller than a few cells (rocks, small steps, ripples) are invisible to the model. Boxwork ridges (about 1 to 2 m tall) are near the limit of what a 1 m DEM resolves.
-- **Registration.** Orbital DEMs are tied to a global reference. A horizontal offset between the DEM and the rover's own position estimate shifts every prediction. [VALIDATION.md](VALIDATION.md) measures how sensitive results are to this.
-- **Vertical reference.** Rover-reported elevations and the DEM can use different vertical datums. The pipeline reports the offset (`web/data/qa.json`) but does not correct it, because visibility depends on relative terrain, not absolute height.
+- **Registration.** Orbital DEMs are tied to a global reference. A horizontal offset between the DEM and the rover's own position estimate shifts every prediction. [VALIDATION.md](VALIDATION.md) measures it: a 25 m shift raises skyline error from 0.43 to 0.81 deg at one stop.
+- **Far horizon is outside the model.** The DEM window is 2.5 km. Where the real skyline is farther away, the predicted skyline and panorama are too low (3 to 6 deg at the one stop measured, looking north across the crater floor). The window-edge flag does not catch this. Treat distant horizons as unvalidated.
+- **Waypoint elevations are not independent.** Rover waypoint elevations match the DEM almost exactly, so they confirm georeferencing but cannot reveal DEM error. Only comparison with real camera images (see [VALIDATION.md](VALIDATION.md)) can.
 - **Coverage.** Only one 2.5 km window is loaded by default. Larger windows cost more data and memory.
 
 ## Perception model
@@ -15,10 +16,13 @@ Stated plainly so results are read correctly.
 
 ## Mobility and safety scope
 - **Walking speed** is a lunar planning figure with a simple slope derate. Suited metabolic cost on Mars terrain is not modeled.
-- **Radiation, dust storms, thermal limits, consumables** are out of scope. Radiation shielding by terrain was measured at one Mars site and is small there, so terrain should not be treated as shelter. This tool addresses navigation and awareness, not the full EVA hazard set.
-- **No route optimizer.** The route is user-drawn. The tool evaluates it. It does not search for the best route.
+- **Radiation dose, dust storms, thermal limits, consumables** are out of scope. Radiation shielding by terrain was measured at one Mars site and is small there, so terrain should not be treated as shelter. This tool addresses navigation and awareness, not the full EVA hazard set.
+- **Planner scope.** The route planner uses the same assumed pace and slope limit, a 5 m grid, and treats the habitat as the only visibility goal. It does not model boulders, soil strength, energy use or consumables, and it does not choose science stops.
+- **Solar particle event check** is a walk-back time against a user-set limit. It is not a radiation model and uses no measured Mars dose rates.
+- **Terrain shadow** is cast by the DEM only, rays leaving the window count as lit, and objects below the DEM cell size cast no shadow.
+- **Position uncertainty** uses an assumed error radius, not a measured navigation error.
 
 ## Software
 - Single-user browser app. No multi-user state, no offline packaging beyond the static files.
 - The sun model is geometric and approximate (about 1 degree).
-- Results are deterministic for a given terrain and inputs. They are predictions, not measurements, and are unvalidated until the results in [VALIDATION.md](VALIDATION.md) say otherwise.
+- Results are deterministic for a given terrain and inputs. They are predictions, not measurements, and are validated only as far as [VALIDATION.md](VALIDATION.md) says: skyline within about 0.5 deg at two stops, wrong toward the far horizon at a third. Seven frames at three stops is a small sample. Landmark visibility (not skyline) was not tested directly.

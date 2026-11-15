@@ -200,6 +200,20 @@ test("route planner: visibility weight reduces time spent out of sight of the ha
   assert.ok(b.cost >= a.cost - 1e-9, "weighted cost cannot be lower than the unweighted path cost");
 });
 
+test("route planner: still finds a route when the start sits on a steep cell", () => {
+  const T = withBlock(flat(600, 600, 2), 296, 306, 296, 306, 40); // 40 m pillar at the start
+  const r = planRoute(T, { x: 300, y: 300 }, { x: 700, y: 300 }, { pad: 200 });
+  assert.ok(r && r.points.length > 2, "route from a steep start cell");
+});
+
+test("route planner: coarsens the grid for long routes so it stays fast", () => {
+  const T = flat(1200, 1200, 2);
+  const t0 = Date.now();
+  const r = planRoute(T, { x: 200, y: 200 }, { x: 2200, y: 2200 }, { habitat: { x: 200, y: 200 }, pad: 250 });
+  assert.ok(r, "route found");
+  assert.ok(Date.now() - t0 < 5000, "long plan under 5 s");
+});
+
 // Runs only when the real terrain window is present (after running the pipeline).
 const here = path.dirname(fileURLToPath(import.meta.url));
 const demJson = path.join(here, "..", "web", "data", "dem.json");

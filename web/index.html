@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vantage | Mars EVA visibility planner</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta name="description" content="Vantage predicts what a walking astronaut can see along a Mars EVA route, from 1 m NASA terrain at Gale Crater.">
+<meta property="og:title" content="Vantage | Mars EVA visibility planner">
+<meta property="og:description" content="See what a walking astronaut can see before they walk. 1 m NASA terrain, real Curiosity route, safety verdicts, route planner.">
+<meta property="og:image" content="preview.png">
 <meta name="theme-color" content="#0a0c0f">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -19,7 +23,7 @@
   </div>
   <div class="chips">
     <span class="chip" id="dataBadge">loading terrain</span>
-    <span class="chip warn" id="valChip" title="Predictions are not yet compared with real Curiosity panoramas">Validation: not run</span>
+    <a class="chip warn" id="valChip" href="#valPanel" title="Predicted skyline compared with real Curiosity Navcam frames">Validation: loading</a>
     <button class="chip btnchip" id="btnWalker">Walker view</button><button class="chip btnchip" id="btnTour">Tour</button><span class="chip" id="sunChip">Sun --</span>
   </div>
 </header>
@@ -142,7 +146,7 @@
     <details class="card">
       <summary><h2>Data, provenance, validation</h2></summary>
       <div id="prov"></div>
-      <p class="note"><b>Validation not run.</b> Planned: render the predicted skyline at real Curiosity stops and compare with the real panoramas (angular skyline error, landmark hit rate). Until results are posted here, treat every prediction as unvalidated.</p>
+      <div id="valPanel"><p class="note">Loading validation results...</p></div>
     </details>
   </aside>
 </div>

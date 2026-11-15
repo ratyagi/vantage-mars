@@ -315,8 +315,10 @@ export function visibilityFraction(T, ax, ay, ah, bx, by, bh, r, opts = {}) {
 // cumulativeWalkMinutes). Cells steeper than slopeLimit are impassable. If `habitat` is given, cells from which the
 // habitat is NOT in line of sight cost (1 + visWeight) times more, so the planner prefers keeping it in view.
 export function planRoute(T, start, goal, o = {}) {
-  const { stride = 5, pad = 250, slopeLimit = 20, levelKmh = 2.0, eyeH = 1.7, habitat = null, habH = 3, visWeight = 0.5 } = o;
-  const g = stride;
+  const { stride: strideIn = 0, pad = 250, slopeLimit = 20, levelKmh = 2.0, eyeH = 1.7, habitat = null, habH = 3, visWeight = 0.5 } = o;
+  const bx = Math.abs(goal.x - start.x) + 2 * pad, by = Math.abs(goal.y - start.y) + 2 * pad;
+  // keep the grid under about 70k cells so a long plan does not freeze the page; coarser cells for long routes
+  const g = strideIn || Math.max(5, Math.ceil(Math.sqrt((bx * by) / 70000) / 5) * 5);
   const x0 = Math.max(0, Math.min(start.x, goal.x) - pad), x1 = Math.min(T.extentX, Math.max(start.x, goal.x) + pad);
   const y0 = Math.max(0, Math.min(start.y, goal.y) - pad), y1 = Math.min(T.extentY, Math.max(start.y, goal.y) + pad);
   const gw = Math.floor((x1 - x0) / g), gh = Math.floor((y1 - y0) / g);
@@ -328,7 +330,7 @@ export function planRoute(T, start, goal, o = {}) {
     const sl = T.slopeDeg(cx(i), cy(j), SLOPE_BASELINE_M);
     slope[k] = isFinite(sl) ? sl : 90;
     if (habitat) {
-      const r = lineOfSight(T, cx(i), cy(j), eyeH, habitat.x, habitat.y, habH, { step: 2 });
+      const r = lineOfSight(T, cx(i), cy(j), eyeH, habitat.x, habitat.y, habH, { step: Math.max(2, g / 2) });
       hidden[k] = r.visible === false ? 1 : 0;
     }
   }
@@ -353,7 +355,7 @@ export function planRoute(T, start, goal, o = {}) {
       const nk = nj * gw + ni;
       if (done[nk]) continue;
       const sl = Math.max(slope[k], slope[nk]);
-      if (sl >= slopeLimit && nk !== tK) continue;
+      if (sl >= slopeLimit && nk !== tK && k !== sK) continue; // the start and goal cells may sit on a steep cell
       const step = Math.hypot(di, dj) * g;
       const f = Math.max(0.05, 1 - Math.min(sl, slopeLimit) / 20);
       const w = (step / (mps * f)) * (1 + (hidden[nk] ? visWeight : 0));

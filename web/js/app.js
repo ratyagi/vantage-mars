@@ -32,11 +32,38 @@ async function init() {
   } catch (_) { /* optional */ }
   bind();
   provenance();
+  loadValidation();
   defaultScene();
   fitView();
   setupMap();
   syncZoomLabel();
   recompute();
+}
+
+
+// ---------- validation panel ----------
+async function loadValidation() {
+  const chip = $("valChip"), box = $("valPanel");
+  try {
+    const d = await (await fetch("data/validation/results.json")).json();
+    const f = (v, n = 2) => (+v).toFixed(n);
+    const rows = d.stops.map((s) => `<tr><td>Sol ${s.sol}</td><td>${s.skyline_all.n}</td><td><b>${f(s.skyline_all.rmse_deg)}&deg;</b></td><td>${Math.round(s.skyline_all.within_1deg * 100)}%</td></tr>`).join("");
+    const good = d.stops.filter((s) => s.skyline_all.rmse_deg < 1);
+    const lo = Math.min(...good.map((s) => s.skyline_all.rmse_deg)), hi = Math.max(...good.map((s) => s.skyline_all.rmse_deg));
+    chip.textContent = `Validated: ${f(lo, 1)} to ${f(hi, 1)}\u00b0 where the horizon is in the window`;
+    chip.className = "chip real";
+    box.innerHTML = `<p class="note"><b>Predicted skyline vs real Curiosity Navcam frames</b> (${d.stops.length} stops, ${d.pooled.all.n} samples, camera height 2.0 m, nothing tuned to these images).</p>
+      <table class="vtab"><tr><th></th><th>n</th><th>RMSE</th><th>within 1&deg;</th></tr>${rows}</table>
+      <p class="note"><b>Works:</b> when the skyline is terrain inside the 2.5 km window (foothills, nearby ridges), error is about half a degree.</p>
+      <p class="note"><b>Fails:</b> when the real skyline lies beyond the window (looking north across the crater floor at sol 4634) the model horizon is 3 to 6&deg; too low. That case is measured at one stop only. Treat far horizons as unvalidated.</p>
+      <p class="note">Moving the observer 25 m raises error at sol 4748 from 0.43&deg; to 0.81&deg;.</p>
+      <img class="vimg" src="data/validation/skyline_comparison.png" alt="Predicted vs real skyline at three Curiosity stops" loading="lazy">
+      <p class="note">Images: NASA/JPL-Caltech. <a href="https://github.com/" id="valLink" target="_blank" rel="noopener">Method and links</a> are in docs/VALIDATION.md.</p>`;
+    const a = $("valLink"); if (a) { a.href = "https://github.com/" + (location.hostname.split(".")[0] || "") + "/vantage-mars/blob/main/docs/VALIDATION.md"; }
+  } catch (_) {
+    chip.textContent = "Validation: results unavailable"; chip.className = "chip warn";
+    box.innerHTML = '<p class="note">Validation results could not be loaded. Treat predictions as unvalidated.</p>';
+  }
 }
 
 // ---------- map ----------
@@ -458,7 +485,7 @@ function bind() {
     $("planBody").innerHTML = `<table class="cmp"><tr><td></td><td><b>Drawn</b></td><td><b>Planned</b></td></tr>` +
       row("Length m", d.len.toFixed(0), p.len.toFixed(0)) + row("Walk min", d.min.toFixed(0), p.min.toFixed(0)) +
       row("Max slope", d.ms.toFixed(0) + "\u00b0", p.ms.toFixed(0) + "\u00b0") +
-      (S.habitat ? row("Habitat hidden", (d.hid * 100).toFixed(0) + "%", (p.hid * 100).toFixed(0) + "%") : "") + `</table><div class="cuffnote">Planner: Dijkstra on a 5 m grid, walking-time cost, slope cells over the limit blocked. Same assumed pace model.</div>`;
+      (S.habitat ? row("Habitat hidden", (d.hid * 100).toFixed(0) + "%", (p.hid * 100).toFixed(0) + "%") : "") + `</table><div class="cuffnote">Planner: Dijkstra on a 5 m grid (coarser for long routes), walking-time cost, slope cells over the limit blocked. Same assumed pace model.</div>`;
     $("planCard").classList.remove("hidden"); $("btnUsePlan").classList.remove("hidden");
     drawMap();
   };
@@ -538,10 +565,11 @@ window.addEventListener("resize", () => { if (!$("walker").classList.contains("h
 const TOUR = [
   { t: "Real Curiosity boxwork route on 1 m NASA terrain. The verdict, predicted view and timeline update at every step.", go: () => setPos(0) },
   { t: "A blind stretch: from here the habitat, rover and summits are all out of sight. This is where an astronaut has nothing to navigate by.", go: () => { const r = S.runs[0] || null; const tot = S.rows.length ? S.rows[S.rows.length - 1].s : 1; setPos(r ? ((r.from + r.length / 2) / tot) * 1000 : 400); } },
+  { t: "Walker view: the full-screen predicted view from the walker's eye height, with the verdict underneath. Arrow keys walk the route.", go: () => { walkerOpen(); } },
   { t: "Same spot, low sun (about 06:30 local time). Slopes and shadows flatten out and the flags warn about it.", go: () => { $("ltst").value = 6.5; drawHillshade(); recompute(); } },
   { t: "Solar particle event alert. Far from the start, the walk back no longer fits the shelter limit, so the verdict goes to HOLD.", go: () => { $("ltst").value = TOURSTATE.ltst; drawHillshade(); $("sepAlert").checked = true; $("shelterMin").value = 30; setPos(850); } },
   { t: "The planner finds a slope-limited route that keeps the habitat in view and compares it with the drawn one.", go: () => { $("sepAlert").checked = false; $("shelterMin").value = 60; setPos(300); $("btnPlan").click(); } },
-  { t: "Every threshold here is a labeled assumption and nothing is claimed beyond the terrain model. Draw your own route to try it.", go: () => { setPos(0); } },
+  { t: "Checked against real Curiosity camera frames: about 0.5 degrees of skyline error where the horizon is inside the model window, and 3 to 6 degrees low toward the far crater rim. Both numbers are on the page.", go: () => { setPos(0); const p = $("valPanel"); const d = p && p.closest("details"); if (d) d.open = true; if (p) p.scrollIntoView({ block: "center" }); } },
 ];
 const TOURSTATE = { ltst: 12 };
 let tourI = -1;
@@ -552,6 +580,7 @@ function tourShow(i) {
   $("tStep").textContent = `${tourI + 1} / ${TOUR.length}`;
   $("tText").textContent = TOUR[tourI].t;
   $("tNext").textContent = tourI === TOUR.length - 1 ? "Finish" : "Next";
+  walkerClose();
   TOUR[tourI].go();
 }
 function tourStart() {
@@ -561,6 +590,7 @@ function tourStart() {
   tourShow(0);
 }
 function tourEnd() {
+  walkerClose();
   $("tourbar").classList.add("hidden"); tourI = -1;
   $("ltst").value = TOURSTATE.ltst; drawHillshade(); $("sepAlert").checked = false; $("shelterMin").value = 60; recompute();
 }

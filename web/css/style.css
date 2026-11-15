@@ -137,3 +137,25 @@ body{background:radial-gradient(1200px 600px at 70% -10%,#1d1410 0,var(--bg) 60%
 .whud[data-level=warn]{border-left-color:var(--warn)}.whud[data-level=bad]{border-left-color:var(--bad)}
 .whud .wv{font:800 30px var(--sans);letter-spacing:.04em;color:var(--ok)}.whud[data-level=warn] .wv{color:var(--warn)}.whud[data-level=bad] .wv{color:var(--bad)}
 .whud .wr{font-size:13px;color:var(--ink)}.whud .ws{display:flex;gap:18px;font-size:11px;color:var(--mute)}.whud .ws b{display:block;font:600 16px var(--mono);color:var(--ink)}
+.tourbar{z-index:70}
+@media (max-width:1100px){
+  .top{height:auto;flex-wrap:wrap;gap:8px;padding:10px 12px}
+  .app{min-height:0}
+  .side{position:static;max-height:none;overflow:visible;padding-right:0}
+  .center{min-height:auto}
+  .mapwrap{flex:none}
+  .tourbar{grid-template-columns:1fr;gap:6px;top:auto;bottom:8px}
+  .whud{grid-template-columns:1fr;gap:8px}
+  .wtop .whint{display:none}
+}
+@media (max-width:1100px){
+  .side{display:contents}
+  .tools{order:2}.center{order:3}.side>*{order:4}.side>.verdict{order:1}
+  .app{gap:12px}
+}
+@media (max-width:1100px){.side>*{min-height:min-content;overflow:visible}.verdict{overflow:hidden}}
+
+#valChip{text-decoration:none;cursor:pointer}
+.vtab{border-collapse:collapse;width:100%;font-size:11px;margin:6px 0}
+.vtab th,.vtab td{border-top:1px solid var(--line);padding:4px;text-align:left}
+.vimg{width:100%;border-radius:6px;margin-top:8px;border:1px solid var(--line)}

@@ -50,7 +50,7 @@ For each image column (azimuth), a ray is marched outward from the observer. A r
 
 ## 7. Hidden ground ahead
 
-Pattern from Apollo 16 and 14 debriefs: a crew standing at a crater rim or crest cannot see the ground just beyond it.
+Pattern from Apollo accounts: a crew standing at a crater rim or crest cannot see the ground just beyond it.
 
 - Sample ground points in a cone of 60 degrees centred on the heading, from 4 m to 50 m range.
 - Test line of sight from eye height to each ground point (target height 0).
@@ -66,6 +66,32 @@ Solar declination from obliquity and solar longitude: `sin(delta) = sin(25.19 de
 ## 9. Mobility
 
 Walking time uses a deliberately simple model: level speed 2 km/h, derated linearly with slope to a floor of 5 percent at the 20 degree planning limit. These are lunar Artemis planning figures. No measured suited-walking speed on natural Martian slopes exists to our knowledge. The number is for comparing routes, not for scheduling.
+
+## 10. Walk-back time and shelter check
+
+- `cumulativeWalkMinutes` integrates the walking-time model of section 9 along the route, giving minutes from the route start to each sample.
+- With the solar particle event alert switched on, the walk-back time from the current point is compared with a user-set shelter limit (default 60 min). Over the limit gives a red flag, inside it gives a caution.
+- The walk-back is the time to return along the drawn route to its start, which is the habitat in the default scene. This is a time check only. It is not a radiation dose model and it does not use any measured Mars dose rate.
+
+## 11. Terrain shadow
+
+For a point, a ray is marched toward the Sun (azimuth and elevation from section 8) up to 2 km. If the terrain along the ray rises above the Sun's elevation angle, with curvature correction, the point is in terrain shadow. Sun below the horizon counts as shadow. Rays that leave the terrain window are treated as lit, which is a simplification. Object shadows below the DEM cell size are not modeled.
+
+## 12. Position uncertainty
+
+Without GPS, position carries error. `visibilityFraction` tests line of sight from the current point and from eight points on a circle of the assumed position error (default 5 m). A fraction of 1 or 0 means the answer does not depend on that error. A fraction in between means habitat visibility at that point is position-sensitive, and a flag says so. The 5 m error is an assumption, not a measured navigation error.
+
+## 13. Route planner
+
+- Dijkstra over a 5 m grid (coarsened automatically, in steps of 5 m, so the grid stays under about 70,000 cells on long routes) between the route start and end, within a padded bounding box, with eight-neighbour moves.
+- Edge cost is estimated walking time using the slope derate of section 9. Cells at or above the slope limit (default 20 degrees) are not passable, except that moves out of the start cell and into the goal cell are allowed so a start on a steep cell still plans.
+- If a habitat is set, cells with no line of sight to it cost `1 + w` times more (default `w = 0.5`), so the planner prefers staying in view of it.
+- The result is compared with the drawn route on length, walking time, steepest slope and share of samples with the habitat hidden. On the default Curiosity route (about 1068 m) the planner returns about 617 m with a steepest slope of 17 degrees against 39 degrees. The drawn route is the rover's real traverse, which included science stops and was driven by a rover, so this comparison shows what the planner does and is not a judgment of the rover route.
+- Unit tests check that the planner crosses a wall only through a gap, returns no route when fully walled, and that a higher visibility weight does not increase time spent out of sight.
+
+## 14. Verdict
+
+The verdict is the worst state among the flags at the current point. Red (HOLD): sun below the horizon, local slope over 20 degrees, nothing used for navigation in view, partner out of sight, or walk-back over the shelter limit during an alert. Amber (CAUTION): low sun, hidden ground ahead, slope over 15 degrees, an upcoming blind stretch, terrain shadow, position-sensitive habitat visibility, or walk-back within the limit during an alert. Otherwise CLEAR. These are rules over the labeled assumptions below. They are not a certified safety determination.
 
 ## Assumption register
 
@@ -83,6 +109,12 @@ Walking time uses a deliberately simple model: level speed 2 km/h, derated linea
 | Hidden-ground flag | above 25 percent hidden | Heuristic | Assumption |
 | Blind stretch minimum | 20 m | Heuristic | Assumption, editable |
 | Route sample spacing | 10 m | Compute/precision trade-off | Fixed |
+| Shelter limit (alert) | 60 min | Planning placeholder | Assumption, editable |
+| Planner slope limit | 20 deg | Artemis planning limit for the Moon | Planning figure for the Moon, editable |
+| Habitat view weight | 0.5 | Planning choice | Assumption, editable |
+| Position error | 5 m | Placeholder | Assumption, editable |
+| Planner grid | 5 m, coarser on long routes | Compute/precision trade-off | Fixed |
+| Terrain shadow range | 2 km | Compute/precision trade-off | Fixed |
 | Planet radius | 3,396,190 m | USGS product metadata | Source value |
 
 Thresholds marked lunar-derived are the main scientific uncertainty. They are exposed in the UI so a user can change them, and results should be read with that in mind.

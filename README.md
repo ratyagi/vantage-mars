@@ -13,21 +13,23 @@ NASA Space Apps Challenge 2026, *Interplanetary Survival Guide: Martian Map*. Si
 ## The problem
 
 - On foot, navigation depends on seeing landmarks. Terrain decides whether you can.
-- Apollo crews misjudged distance and slope, and on Apollo 14 the crew did not recognize the Cone Crater rim that was within about 30 m. Low sun made slopes look steeper than they were.
+- Apollo crews misjudged distance and slope, the Apollo 14 crew did not recognize the rim of Cone Crater, and low sun made slopes look steeper than they were.
 - On Mars, ground control is up to about 20 minutes away by radio, so the crew and the pre-planned route carry more of the safety burden.
 - Traverse planning weighs slope, distance and time, and Artemis planning already uses line of sight to the lander as one input. We did not find a tool that shows, along a whole route, which landmarks, partner and vehicles stay in view, renders what the crew would see, and flags where that view is likely to mislead them.
 
 ## What Vantage does
 
-Three outputs, all computed from a digital elevation model (DEM):
+All outputs are computed from a digital elevation model (DEM) and the traverse geometry:
 
 | Output | Question it answers |
 |---|---|
+| **Verdict** | CLEAR, CAUTION or HOLD at the current point on the route, with the reason and the walk-back time. |
 | **Visibility strip** | Along this route, where are habitat, rover, partner and landmarks in view, and where is nothing in view? |
-| **Predicted view** | What does the skyline and terrain look like from this point, looking this way, at this local solar time? |
-| **Perception flags** | Where is the sun low enough to distort slope judgment, or the ground ahead hidden (crater-rim pattern)? |
+| **Predicted view** | What does the skyline and terrain look like from this point, looking this way, at this local solar time? A full-screen **Walker view** follows the route with the arrow keys. |
+| **Safety checks** | Slope against the planning limit, ground hidden ahead, low sun, terrain shadow, partner out of sight, how sensitive habitat visibility is to a position error, and a walk-back time checked against a shelter limit when a solar particle event alert is set. |
+| **Route planner** | A slope-limited route that prefers keeping the habitat in view, compared with the drawn route on length, time, steepest slope and share of the route with the habitat hidden. |
 
-Plus a **cuff card**: the six numbers a crew member would need on a wrist display (heading, habitat distance and visibility, max slope ahead, next blind stretch, sun elevation, walk time).
+The **cuff card** gives the numbers a crew member would need on a wrist display: heading, habitat distance and visibility, max slope ahead, next blind stretch, sun elevation, walk-back time and total walk time. A 60 second guided tour in the app shows each feature on the real route.
 
 ## Scientific goal and location
 
@@ -40,15 +42,15 @@ Plus a **cuff card**: the six numbers a crew member would need on a wrist displa
 | Requirement | How |
 |---|---|
 | At least 3 kinds of data, layered | Orbital topography (USGS Gale 1 m DEM), rover traverse (NASA MMGIS waypoints), solar geometry (Ls, local true solar time), derived slope. Surface imagery from Curiosity is used for validation. |
-| Astronaut safety first | Visibility and blind-stretch warnings, hidden-ground-ahead flag, low-sun flag, slope limits, partner line of sight. Radiation and dust are out of scope here and listed under [limitations](docs/LIMITATIONS.md). |
-| Suited mobility and obstacle avoidance | Slope-derated walking time. Route is user-drawn and checked against slope and visibility. Obstacles smaller than the DEM cell are not modeled. |
+| Astronaut safety first | Visibility and blind-stretch warnings, hidden-ground-ahead flag, low-sun flag, terrain shadow, slope limits, partner line of sight, and a walk-back time checked against a user-set shelter limit during a solar particle event alert. A radiation model and dust are out of scope and listed under [limitations](docs/LIMITATIONS.md). |
+| Suited mobility and obstacle avoidance | Slope-derated walking time. A planner finds a route that avoids slopes over a set limit and keeps the habitat in view, and the drawn route is checked against slope and visibility. Obstacles smaller than the DEM cell are not modeled. |
 | Point-of-view surface imagery | Predicted first-person terrain view. Compared with real Curiosity panoramas in [validation](docs/VALIDATION.md). |
 | Rovers, robots, crew pairs | Rover is a visibility target. A trailing partner at a set distance gives a lost-partner flag. |
 | Format | Browser app. Cuff card is designed for a wrist or tablet display. Nothing is mounted to the helmet. |
 
 ## Live demo
 
-- GitHub Pages: see the repository's *About* link.
+- GitHub Pages: see the repository's *About* link. Choose *Take the 60 second tour* on the welcome card.
 - Local: see below.
 
 ## Run locally
@@ -84,7 +86,7 @@ docs/           Methodology, architecture, data, validation, limitations, refere
 
 ## Status
 
-- Working: visibility core, route products, predicted view, UI (zoom to route, scrubbing, playback), data pipeline, 15 JS tests and a pipeline test.
+- Working: visibility core, route products, predicted view and Walker view, verdict, walk-back and shelter check, terrain shadow, position-sensitivity check, route planner, guided tour, data pipeline, 22 JS tests and a pipeline test.
 - Validation against real Curiosity panoramas: see [docs/VALIDATION.md](docs/VALIDATION.md) for protocol and current results.
 - Every threshold and height in the app is an editable assumption with its basis stated in [docs/METHODOLOGY.md](docs/METHODOLOGY.md#assumption-register). None is a measured Mars value unless stated.
 
