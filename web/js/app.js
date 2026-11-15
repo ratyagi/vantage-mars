@@ -2,7 +2,7 @@ import { Terrain, makeSyntheticTerrain, hillshade } from "./terrain.js";
 import { sunPosition } from "./sun.js";
 import {
   sampleRoute, routeVisibility, blindRuns, skyline, hiddenGroundAhead,
-  viewshed, renderPanorama, walkMinutes, azimuthDeg, suggestLandmarks, SLOPE_BASELINE_M,
+  viewshed, renderPanorama, walkMinutes, cumulativeWalkMinutes, inTerrainShadow, visibilityFraction, planRoute, azimuthDeg, suggestLandmarks, SLOPE_BASELINE_M,
 } from "./visibility.js";
 
 const $ = (id) => document.getElementById(id);
@@ -94,6 +94,11 @@ function drawMap() {
   mctx.drawImage(S.hs, V.x0 / cell, V.y0 / cell, V.size / cell, V.size / cell, 0, 0, view.W, view.H);
   if ($("showSlope").checked) drawSlope();
   if ($("showView").checked && S.vs) drawViewshed();
+  if (S.planned) {
+    mctx.save(); mctx.setLineDash([8, 6]); mctx.strokeStyle = "#4cc9d8"; mctx.lineWidth = 2.5; mctx.beginPath();
+    S.planned.forEach((p, i) => { const [x, y] = toPx(p.x, p.y); i ? mctx.lineTo(x, y) : mctx.moveTo(x, y); });
+    mctx.stroke(); mctx.restore();
+  }
   // route with blind runs
   if (S.rows.length > 1) {
     mctx.lineWidth = 3 * (view.dpr || 1); mctx.lineJoin = "round"; mctx.strokeStyle = "#fff"; mctx.beginPath();
@@ -196,6 +201,7 @@ function recompute() {
   const T = S.T;
   const opts = { eyeH: +$("eyeH").value, partnerGap: +$("partnerGap").value };
   S.rows = S.route.length > 1 ? routeVisibility(T, sampleRoute(S.route, 10), targets(), opts) : [];
+  S.cum = S.rows.length ? cumulativeWalkMinutes(S.T, S.rows) : [];
   S.runs = S.rows.length ? blindRuns(S.rows, targets(), +$("blindMin").value) : [];
   $("oLtst").textContent = (+$("ltst").value).toFixed(2);
   $("oLs").textContent = $("ls").value;
@@ -329,7 +335,8 @@ function drawPano() {
 // ---------- flags ----------
 function flags() {
   const ul = $("flags"); ul.innerHTML = "";
-  const add = (cls, text, ev) => { const li = document.createElement("li"); li.className = cls; li.innerHTML = `<div>${text}<span class="ev">${ev}</span></div>`; ul.appendChild(li); };
+  let worst = 0, why = null;
+  const add = (cls, text, ev) => { const lv = cls === "bad" ? 2 : cls === "warn" ? 1 : 0; if (lv > worst) { worst = lv; why = text; } const li = document.createElement("li"); li.className = cls; li.innerHTML = `<div>${text}<span class="ev">${ev}</span></div>`; ul.appendChild(li); };
   const cur = currentSample();
   if (!cur) { add("", "Draw a route to get flags.", "n/a"); return; }
   const sun = sunNow(), thr = +$("thrSun").value;
@@ -343,8 +350,34 @@ function flags() {
   const anyVis = targets().some((t) => cur.vis[t.id].visible === true);
   if (targets().length && !anyVis) add("bad", "Nothing you could navigate by is in view from here.", "geometry over DEM");
   if (cur.partner && cur.partner.visible === false) add("bad", "Partner is out of line of sight.", "geometry, assumed partner gap");
+  const sh = inTerrainShadow(S.T, cur.x, cur.y, sun.azDeg, sun.elevDeg);
+  if (sh === true && sun.elevDeg > 0) add("warn", "This spot is in terrain shadow from the Sun: low contrast, colder, easy to misjudge ground.", "geometry over DEM, no atmosphere scattering");
+  if (S.habitat && cur.vis.hab && !isNaN(cur.s)) {
+    const f = visibilityFraction(S.T, cur.x, cur.y, +$("eyeH").value, S.habitat.x, S.habitat.y, +$("habH").value, +$("posErr").value);
+    if (f !== null && f > 0 && f < 1) add("warn", `Habitat visibility here depends on position: ${(f * 100).toFixed(0)}% of points within ${$("posErr").value} m see it.`, "position-error sensitivity, assumed error");
+  }
+  const wb = S.cum && S.cum.length ? S.cum[S.rows.indexOf(cur)] : null;
+  if (wb !== null && wb !== undefined) {
+    const lim = +$("shelterMin").value;
+    if ($("sepAlert").checked && wb > lim) add("bad", `SEP alert: walk-back along the route is ${wb.toFixed(0)} min, over the ${lim} min shelter limit.`, "assumed pace and limit, not a radiation model");
+    else if ($("sepAlert").checked) add("warn", `SEP alert: walk-back ${wb.toFixed(0)} min of ${lim} min limit.`, "assumed pace and limit");
+  }
   for (const r of S.runs) add("warn", `Blind stretch ${r.from.toFixed(0)} to ${r.to.toFixed(0)} m (${r.length.toFixed(0)} m).`, "geometry over DEM");
   if (!ul.children.length) add("ok", "No flags at this position and time.", "unvalidated");
+  verdict(worst, why, cur);
+}
+
+function verdict(worst, why, cur) {
+  const v = $("verdict"), lvl = ["ok", "warn", "bad"][worst];
+  v.dataset.level = lvl;
+  $("vLabel").textContent = ["CLEAR", "CAUTION", "HOLD"][worst];
+  $("vReason").textContent = worst ? why : "Home or a landmark is in view, slope and sun are within the assumed limits.";
+  if (!cur) { $("vStats").innerHTML = ""; return; }
+  const wb = S.cum && S.cum.length ? S.cum[S.rows.indexOf(cur)] : null;
+  const sun = sunNow();
+  const hab = S.habitat ? Math.hypot(cur.x - S.habitat.x, cur.y - S.habitat.y) : null;
+  const st = (l, v2) => `<div>${l}<b>${v2}</b></div>`;
+  $("vStats").innerHTML = st("Walk-back", wb === null || wb === undefined ? "--" : wb.toFixed(0) + " min") + st("To habitat", hab === null ? "--" : hab.toFixed(0) + " m") + st("Sun", sun.elevDeg.toFixed(0) + "\u00b0");
 }
 
 // ---------- cuff card ----------
@@ -363,6 +396,7 @@ function cuff() {
     kpi(maxSl > 20 ? "bad" : maxSl > 15 ? "warn" : "", "Max slope", maxSl.toFixed(0), "\u00b0", "next 120 m") +
     (nextBlind ? kpi("warn", "Blind stretch", Math.max(0, nextBlind.from - cur.s).toFixed(0), "m ahead", nextBlind.length.toFixed(0) + " m long") : kpi("ok", "Blind stretch", "none", "", "next 120 m")) +
     kpi(sun.elevDeg < thr ? "warn" : "", "Sun elevation", sun.elevDeg.toFixed(0), "\u00b0", sun.elevDeg < thr ? "low sun" : "ok") +
+    (S.cum && S.cum.length ? kpi($("sepAlert").checked && S.cum[S.rows.indexOf(cur)] > +$("shelterMin").value ? "bad" : "", "Walk-back", S.cum[S.rows.indexOf(cur)].toFixed(0), "min", "along route to start") : "") +
     kpi("", "Walk time", S.rows.length ? walkMinutes(S.T, S.rows).toFixed(0) : "--", "min", "assumed pace") +
     `<div class="cuffnote">Unvalidated terrain-model prediction.</div>`;
 }
@@ -402,6 +436,28 @@ function bind() {
     document.querySelectorAll(".mode").forEach((x) => x.classList.toggle("active", x === b));
   }));
   $("btnClear").onclick = () => { S.route = []; S.landmarks = []; S.habitat = null; S.rover = null; S.view = null; setupMap(); recompute(); };
+  $("btnPlan").onclick = () => {
+    if (S.route.length < 2) return;
+    const st = S.route[0], gl = S.route[S.route.length - 1];
+    const r = planRoute(S.T, st, gl, { slopeLimit: +$("slopeLim").value, eyeH: +$("eyeH").value, habitat: S.habitat, habH: +$("habH").value, visWeight: +$("visW").value });
+    if (!r) { $("planCard").classList.remove("hidden"); $("planBody").textContent = "No route found under the slope limit."; $("btnUsePlan").classList.add("hidden"); return; }
+    S.planned = r.points;
+    const stat = (pts) => {
+      const rows = routeVisibility(S.T, sampleRoute(pts, 10), targets(), { eyeH: +$("eyeH").value, partnerGap: +$("partnerGap").value });
+      const hid = S.habitat ? rows.filter((q) => q.vis.hab.visible === false).length / rows.length : 0;
+      const ms = Math.max(...rows.map((q) => S.T.slopeDeg(q.x, q.y, SLOPE_BASELINE_M)).filter(isFinite), 0);
+      return { len: rows.length ? rows[rows.length - 1].s : 0, min: walkMinutes(S.T, rows), hid, ms };
+    };
+    const d = stat(S.route), p = stat(S.planned);
+    const row = (l, x, y) => `<tr><td>${l}</td><td>${x}</td><td>${y}</td></tr>`;
+    $("planBody").innerHTML = `<table class="cmp"><tr><td></td><td><b>Drawn</b></td><td><b>Planned</b></td></tr>` +
+      row("Length m", d.len.toFixed(0), p.len.toFixed(0)) + row("Walk min", d.min.toFixed(0), p.min.toFixed(0)) +
+      row("Max slope", d.ms.toFixed(0) + "\u00b0", p.ms.toFixed(0) + "\u00b0") +
+      (S.habitat ? row("Habitat hidden", (d.hid * 100).toFixed(0) + "%", (p.hid * 100).toFixed(0) + "%") : "") + `</table><div class="cuffnote">Planner: Dijkstra on a 5 m grid, walking-time cost, slope cells over the limit blocked. Same assumed pace model.</div>`;
+    $("planCard").classList.remove("hidden"); $("btnUsePlan").classList.remove("hidden");
+    drawMap();
+  };
+  $("btnUsePlan").onclick = () => { if (S.planned) { S.route = S.planned; S.planned = null; $("planCard").classList.add("hidden"); recompute(); } };
   $("btnZoom").onclick = () => { S.fit = !S.fit; fitView(); setupMap(); syncZoomLabel(); recompute(); };
   $("btnAuto").onclick = () => { S.landmarks = suggestLandmarks(S.T, S.route).map((c, i) => ({ x: c.x, y: c.y, name: "Summit " + (i + 1) })); recompute(); };
   $("btnTraverse").onclick = () => {
@@ -411,7 +467,7 @@ function bind() {
     fitView(); setupMap(); recompute();
   };
   for (const id of ["pos", "ltst", "ls", "lookMode", "lookAz", "fov"]) $(id).addEventListener("input", () => { if (id === "ltst" || id === "ls") drawHillshade(); recompute(); });
-  for (const id of ["eyeH", "partnerGap", "landH", "habH", "thrSun", "blindMin", "showView", "showSlope"]) $(id).addEventListener("input", recompute);
+  for (const id of ["eyeH", "partnerGap", "landH", "habH", "thrSun", "blindMin", "showView", "showSlope", "sepAlert", "shelterMin", "posErr"]) $(id).addEventListener("input", recompute);
   map.addEventListener("mousemove", (ev) => {
     const p = pickXY(ev), z = S.T.heightAt(p.x, p.y), sl = S.T.slopeDeg(p.x, p.y);
     $("hoverReadout").textContent = S.T.inside(p.x, p.y) ? `E ${p.x.toFixed(0)} m  S ${p.y.toFixed(0)} m   elev ${isFinite(z) ? z.toFixed(1) : "--"} m   slope ${isFinite(sl) ? sl.toFixed(1) : "--"}\u00b0` : "outside window";
@@ -448,5 +504,43 @@ function defaultScene() {
   }
   S.landmarks = suggestLandmarks(T, S.route).map((c, i) => ({ x: c.x, y: c.y, name: "Summit " + (i + 1) }));
 }
+
+// ---------- guided tour ----------
+const TOUR = [
+  { t: "Real Curiosity boxwork route on 1 m NASA terrain. The verdict, predicted view and timeline update at every step.", go: () => setPos(0) },
+  { t: "A blind stretch: from here the habitat, rover and summits are all out of sight. This is where an astronaut has nothing to navigate by.", go: () => { const r = S.runs[0] || null; const tot = S.rows.length ? S.rows[S.rows.length - 1].s : 1; setPos(r ? ((r.from + r.length / 2) / tot) * 1000 : 400); } },
+  { t: "Same spot, low sun (about 06:30 local time). Slopes and shadows flatten out and the flags warn about it.", go: () => { $("ltst").value = 6.5; drawHillshade(); recompute(); } },
+  { t: "Solar particle event alert. Far from the start, the walk back no longer fits the shelter limit, so the verdict goes to HOLD.", go: () => { $("ltst").value = TOURSTATE.ltst; drawHillshade(); $("sepAlert").checked = true; $("shelterMin").value = 30; setPos(850); } },
+  { t: "The planner finds a slope-limited route that keeps the habitat in view and compares it with the drawn one.", go: () => { $("sepAlert").checked = false; $("shelterMin").value = 60; setPos(300); $("btnPlan").click(); } },
+  { t: "Every threshold here is a labeled assumption and nothing is claimed beyond the terrain model. Draw your own route to try it.", go: () => { setPos(0); } },
+];
+const TOURSTATE = { ltst: 12 };
+let tourI = -1;
+function setPos(v) { $("pos").value = Math.round(v); recompute(); }
+function tourShow(i) {
+  tourI = Math.max(0, Math.min(TOUR.length - 1, i));
+  $("tourbar").classList.remove("hidden");
+  $("tStep").textContent = `${tourI + 1} / ${TOUR.length}`;
+  $("tText").textContent = TOUR[tourI].t;
+  $("tNext").textContent = tourI === TOUR.length - 1 ? "Finish" : "Next";
+  TOUR[tourI].go();
+}
+function tourStart() {
+  TOURSTATE.ltst = +$("ltst").value;
+  S.planned = null; $("planCard").classList.add("hidden");
+  $("welcome").classList.add("hidden");
+  tourShow(0);
+}
+function tourEnd() {
+  $("tourbar").classList.add("hidden"); tourI = -1;
+  $("ltst").value = TOURSTATE.ltst; drawHillshade(); $("sepAlert").checked = false; $("shelterMin").value = 60; recompute();
+}
+$("wTour").onclick = tourStart;
+$("wExplore").onclick = () => $("welcome").classList.add("hidden");
+$("btnTour").onclick = tourStart;
+$("tPrev").onclick = () => tourShow(tourI - 1);
+$("tNext").onclick = () => (tourI >= TOUR.length - 1 ? tourEnd() : tourShow(tourI + 1));
+$("tEnd").onclick = tourEnd;
+window.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("welcome").classList.add("hidden"); if (tourI >= 0) tourEnd(); } });
 
 init();

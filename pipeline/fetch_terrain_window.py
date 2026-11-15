@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fetch a small window of the USGS Gale 1 m DEM and Curiosity waypoints for Sightline.
+Fetch a small window of the USGS Gale 1 m DEM and Curiosity waypoints for Vantage.
 
 What it does
   1. Downloads Curiosity waypoints (NASA MMGIS JSON) and keeps sols >= --sol-min.
@@ -225,9 +225,9 @@ def main():
                 "mad_m": round(mad, 3),
                 "p10_m": round(float(np.percentile(d, 10)), 3),
                 "p90_m": round(float(np.percentile(d, 90)), 3),
-                "note": ("Rover elevation and DEM may use different vertical references; "
-                         "the median offset is informational, the spread (MAD) hints at "
-                         "horizontal registration and local relief effects. Not a formal accuracy."),
+                "note": ("MMGIS waypoint elevations appear to be sampled from the same DEM family, so a "
+                         "near-zero difference confirms the lon/lat to pixel mapping, not independent "
+                         "accuracy. A large difference suggests a georeferencing or vertical-datum problem."),
             })
         log("QA:", qa)
 

@@ -1,6 +1,6 @@
 # Methodology
 
-How Sightline turns a digital elevation model (DEM) into visibility predictions for a walking crew member. Every formula here is implemented in `web/js/visibility.js` and `web/js/sun.js` and covered by tests in `tests/core.test.mjs`.
+How Vantage turns a digital elevation model (DEM) into visibility predictions for a walking crew member. Every formula here is implemented in `web/js/visibility.js` and `web/js/sun.js` and covered by tests in `tests/core.test.mjs`.
 
 ## 1. Problem statement
 

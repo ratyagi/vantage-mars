@@ -1,10 +1,10 @@
-# Sightline
+# Vantage
 
 **Terrain-based visibility planning for Mars EVA. For any route, it predicts what a walking astronaut can see, and what they will lose sight of: habitat, rover, partner, landmarks.**
 
 NASA Space Apps Challenge 2026, *Interplanetary Survival Guide: Martian Map*. Site: Gale Crater, Mount Sharp boxwork region (Curiosity rover traverse).
 
-![Sightline overview](docs/img/overview.png)
+![Vantage overview](docs/img/overview.png)
 
 [Live demo](#live-demo) &middot; [Methodology](docs/METHODOLOGY.md) &middot; [Architecture](docs/ARCHITECTURE.md) &middot; [Data](docs/DATA.md) &middot; [Validation](docs/VALIDATION.md) &middot; [Limitations](docs/LIMITATIONS.md) &middot; [References](docs/REFERENCES.md)
 
@@ -15,9 +15,9 @@ NASA Space Apps Challenge 2026, *Interplanetary Survival Guide: Martian Map*. Si
 - On foot, navigation depends on seeing landmarks. Terrain decides whether you can.
 - Apollo crews misjudged distance and slope, and on Apollo 14 the crew did not recognize the Cone Crater rim that was within about 30 m. Low sun made slopes look steeper than they were.
 - On Mars, ground control is up to about 20 minutes away by radio, so the crew and the pre-planned route carry more of the safety burden.
-- Existing route and traverse tools plan geometry (distance, slope, time). We found none that predict *what the crew will actually see along the route*, or flag where the view will mislead them.
+- Traverse planning weighs slope, distance and time, and Artemis planning already uses line of sight to the lander as one input. We did not find a tool that shows, along a whole route, which landmarks, partner and vehicles stay in view, renders what the crew would see, and flags where that view is likely to mislead them.
 
-## What Sightline does
+## What Vantage does
 
 Three outputs, all computed from a digital elevation model (DEM):
 

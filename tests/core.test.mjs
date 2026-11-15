@@ -8,6 +8,7 @@ import { sunPosition } from "../web/js/sun.js";
 import {
   lineOfSight, sampleRoute, routeVisibility, blindRuns, skyline,
   hiddenGroundAhead, renderPanorama, curvDrop, azimuthDeg, walkMinutes, suggestLandmarks,
+  cumulativeWalkMinutes, inTerrainShadow, shadowMap, visibilityFraction, planRoute,
 } from "../web/js/visibility.js";
 
 function flat(w = 400, h = 400, cell = 1, z = 0) {
@@ -137,6 +138,66 @@ test("suggestLandmarks: picks a clear summit near the route, away from edges", (
   assert.ok(lm.length >= 1);
   assert.ok(lm.every((c) => c.x >= 100 && c.x <= T.extentX - 100 && c.y >= 100 && c.y <= T.extentY - 100));
   assert.ok(Math.hypot(lm[0].x - 620, lm[0].y - 620) < 40, `got ${lm[0].x},${lm[0].y}`);
+});
+
+test("cumulative walk minutes ends at the total and is monotonic", () => {
+  const T = makeSyntheticTerrain(300, 300, 2);
+  const rows = sampleRoute([{ x: 50, y: 50 }, { x: 500, y: 400 }], 10);
+  const c = cumulativeWalkMinutes(T, rows);
+  assert.equal(c.length, rows.length);
+  assert.ok(Math.abs(c[c.length - 1] - walkMinutes(T, rows)) < 1e-9);
+  for (let i = 1; i < c.length; i++) assert.ok(c[i] >= c[i - 1]);
+});
+
+test("terrain shadow: ridge toward a low sun shadows the lee side, flat ground is lit, night is dark", () => {
+  const T = withBlock(flat(600, 600, 2), 400, 420, 0, 1200, 30); // 30 m wall at x 400..420
+  // sun in the east (az 90) at 10 deg: point west of wall (x=300) is shadowed, point east (x=800) lit
+  assert.equal(inTerrainShadow(T, 300, 600, 90, 10), true);
+  assert.equal(inTerrainShadow(T, 800, 600, 90, 10), false);
+  assert.equal(inTerrainShadow(T, 300, 600, 90, 80), false, "high sun clears a 30 m wall 100 m away");
+  assert.equal(inTerrainShadow(flat(), 100, 100, 90, -5), true, "sun below horizon");
+  const m = shadowMap(T, { azDeg: 90, elevDeg: 10 }, null, 10);
+  assert.ok(m.grid.some((v) => v === 1) && m.grid.some((v) => v === 0));
+});
+
+test("visibility fraction: certain on open ground, certain when blocked, sensitive at a wall edge", () => {
+  const open = flat();
+  assert.equal(visibilityFraction(open, 50, 200, 1.7, 300, 200, 2, 5), 1);
+  const wall = withBlock(flat(), 150, 154, 0, 400, 20);
+  assert.equal(visibilityFraction(wall, 50, 200, 1.7, 300, 200, 2, 5), 0);
+  // wall only covers y 100..300; target line passes near its end so +-5 m changes the answer
+  const edge = withBlock(flat(), 150, 154, 100, 198, 20);
+  const f = visibilityFraction(edge, 50, 200, 1.7, 300, 200, 2, 8);
+  assert.ok(f > 0 && f < 1, `fraction ${f}`);
+});
+
+test("route planner: goes around an impassable wall through the gap, avoids steep cells", () => {
+  const T = withBlock(flat(600, 600, 2), 600, 620, 0, 900, 40); // wall from y=0..900, gap at y>900 (extent 1200)
+  const r = planRoute(T, { x: 300, y: 300 }, { x: 900, y: 300 }, { pad: 800, slopeLimit: 20 });
+  assert.ok(r, "route found");
+  const onWall = r.points.filter((p) => p.x >= 600 && p.x <= 620);
+  assert.ok(onWall.length > 0 && onWall.every((p) => p.y >= 899), "path must cross the wall's line only through the gap");
+  assert.deepEqual([r.points[0].x, r.points[0].y], [300, 300]);
+  assert.deepEqual([r.points[r.points.length - 1].x, r.points[r.points.length - 1].y], [900, 300]);
+  const blocked = planRoute(withBlock(flat(600, 600, 2), 600, 620, 0, 1200, 40), { x: 300, y: 300 }, { x: 900, y: 300 }, { pad: 800 });
+  assert.equal(blocked, null, "fully walled: no route");
+});
+
+test("route planner: visibility weight reduces time spent out of sight of the habitat", () => {
+  const T = flat(600, 600, 2);
+  for (let j = 0; j < 600; j++) for (let i = 0; i < 600; i++) { // smooth hill, about 13 deg max slope, passable
+    const x = (i + 0.5) * 2, y = (j + 0.5) * 2;
+    T.data[j * 600 + i] = 15 * Math.exp(-(((x - 500) / 40) ** 2 + ((y - 300) / 40) ** 2));
+  }
+  const hab = { x: 100, y: 300 };
+  const hiddenFrac = (pts) => {
+    const rows = routeVisibility(T, sampleRoute(pts, 10), [{ id: "h", x: hab.x, y: hab.y, h: 3 }], { eyeH: 1.7 });
+    return rows.filter((r) => r.vis.h.visible === false).length / rows.length;
+  };
+  const a = planRoute(T, { x: 250, y: 300 }, { x: 900, y: 300 }, { pad: 300, habitat: hab, visWeight: 0 });
+  const b = planRoute(T, { x: 250, y: 300 }, { x: 900, y: 300 }, { pad: 300, habitat: hab, visWeight: 6 });
+  assert.ok(hiddenFrac(b.points) <= hiddenFrac(a.points), `weighted ${hiddenFrac(b.points)} vs plain ${hiddenFrac(a.points)}`);
+  assert.ok(b.cost >= a.cost - 1e-9, "weighted cost cannot be lower than the unweighted path cost");
 });
 
 // Runs only when the real terrain window is present (after running the pipeline).

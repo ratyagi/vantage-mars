@@ -1,5 +1,5 @@
 {
-  "name": "sightline-mars",
+  "name": "vantage-mars",
   "version": "0.1.0",
   "description": "Terrain-based visibility planning for Mars EVA (Gale Crater boxwork)",
   "type": "module",

@@ -18,7 +18,7 @@ Grouped by what each informed. Lunar sources are used where Mars data do not exi
 
 ## Display and human factors
 - Joint Augmented Reality trade study, NASA. https://ntrs.nasa.gov/citations/20230010234 *(display must be modular; nothing mounted to the helmet)*
-- NASA-STD-3001 and NASA suit human-factors briefs. *(helmet field of regard must remain unencumbered)* This is why Sightline is designed for a wrist or tablet display.
+- NASA-STD-3001 and NASA suit human-factors briefs. *(helmet field of regard must remain unencumbered)* This is why Vantage is designed for a wrist or tablet display.
 
 ## Mars terrain and data
 - Curiosity boxwork campaign, NASA/JPL. https://www.jpl.nasa.gov/news/nasas-curiosity-rover-sees-martian-spiderwebs-up-close/ *(ridges about 1 to 2 m tall, sandy hollows; campaign from sol 4600)*

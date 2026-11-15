@@ -209,18 +209,24 @@ export function renderPanorama(T, ox, oy, eyeH, azCenterDeg, fovDeg, W, H, sun, 
   return { pixels: px, width: W, height: H, skylineRow: sky_row, angMin, angMax };
 }
 
-// Walking time along rows using a SIMPLE ASSUMED model: level pace 2 km/h (Artemis planning figure),
-// linearly derated to zero at 20 degrees (Artemis planning slope limit). Mars suited speed on natural
-// slopes has not been measured; this is a placeholder for planning-scale comparisons only.
-export function walkMinutes(T, rows, levelKmh = 2.0, limitDeg = 20) {
+// Walking time using a SIMPLE ASSUMED model: level pace 2 km/h (Artemis planning figure), linearly derated to 5 percent
+// at 20 degrees (Artemis planning slope limit). Mars suited speed on natural slopes has not been measured; this is a
+// placeholder for comparing routes, not for scheduling. Returns cumulative minutes at each row (cum[0] = 0).
+export function cumulativeWalkMinutes(T, rows, levelKmh = 2.0, limitDeg = 20) {
+  const out = [0];
   let sec = 0;
   for (let i = 1; i < rows.length; i++) {
     const d = rows[i].s - rows[i - 1].s;
     const sl = T.slopeDeg((rows[i].x + rows[i - 1].x) / 2, (rows[i].y + rows[i - 1].y) / 2, SLOPE_BASELINE_M);
     const f = isFinite(sl) ? Math.max(0.05, 1 - sl / limitDeg) : 1;
     sec += d / ((levelKmh * 1000 / 3600) * f);
+    out.push(sec / 60);
   }
-  return sec / 60;
+  return out;
+}
+export function walkMinutes(T, rows, levelKmh = 2.0, limitDeg = 20) {
+  const c = cumulativeWalkMinutes(T, rows, levelKmh, limitDeg);
+  return c.length ? c[c.length - 1] : 0;
 }
 
 // Suggest landmarks: local summits that stand clear of their surroundings, near the route but not on it,
@@ -259,4 +265,105 @@ export function suggestLandmarks(T, route, o = {}) {
     if (out.length >= n) break;
   }
   return out;
+}
+
+// ---------- terrain shadow ----------
+// True if the point at (x,y) is shadowed by terrain from the Sun (or the Sun is below the horizon).
+// Rays that leave the terrain window are assumed to be lit (a stated simplification).
+export function inTerrainShadow(T, x, y, sunAzDeg, sunElDeg, maxRange = 2000) {
+  if (sunElDeg <= 0) return true;
+  const z0 = T.heightAt(x, y);
+  if (!isFinite(z0)) return null;
+  const az = sunAzDeg * RAD, ux = Math.sin(az), uy = -Math.cos(az), tanEl = Math.tan(sunElDeg * RAD);
+  for (let d = T.cell; d <= maxRange; d += d < 100 ? T.cell : T.cell * 3) {
+    const z = T.heightAt(x + ux * d, y + uy * d);
+    if (!isFinite(z)) return false;
+    if ((z - z0 - curvDrop(d)) / d > tanEl) return true;
+  }
+  return false;
+}
+
+export function shadowMap(T, sun, bounds, stride = 4, maxRange = 2000) {
+  const b = bounds || { x0: 0, y0: 0, x1: T.extentX, y1: T.extentY };
+  const cs = stride * T.cell;
+  const gw = Math.max(1, Math.floor((b.x1 - b.x0) / cs)), gh = Math.max(1, Math.floor((b.y1 - b.y0) / cs));
+  const out = new Uint8Array(gw * gh);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+    const r = inTerrainShadow(T, b.x0 + (i + 0.5) * cs, b.y0 + (j + 0.5) * cs, sun.azDeg, sun.elevDeg, maxRange);
+    out[j * gw + i] = r === null ? 2 : r ? 1 : 0;
+  }
+  return { grid: out, gw, gh, x0: b.x0, y0: b.y0, cellM: cs };
+}
+
+// ---------- position-uncertainty confidence ----------
+// Fraction of observer positions (centre plus 8 around a circle of radius r metres) from which the target is visible.
+// 1 or 0 means the answer does not depend on a position error of r; in between means it is position-sensitive.
+export function visibilityFraction(T, ax, ay, ah, bx, by, bh, r, opts = {}) {
+  let vis = 0, n = 0;
+  const offs = [[0, 0]];
+  for (let k = 0; k < 8; k++) offs.push([Math.cos((k / 8) * 2 * Math.PI) * r, Math.sin((k / 8) * 2 * Math.PI) * r]);
+  for (const [ox, oy] of offs) {
+    const res = lineOfSight(T, ax + ox, ay + oy, ah, bx, by, bh, opts);
+    if (res.visible === null) continue;
+    n++; if (res.visible) vis++;
+  }
+  return n ? vis / n : null;
+}
+
+// ---------- route planner ----------
+// Dijkstra over a coarse grid between start and goal. Edge cost is estimated walking time (same slope derate as
+// cumulativeWalkMinutes). Cells steeper than slopeLimit are impassable. If `habitat` is given, cells from which the
+// habitat is NOT in line of sight cost (1 + visWeight) times more, so the planner prefers keeping it in view.
+export function planRoute(T, start, goal, o = {}) {
+  const { stride = 5, pad = 250, slopeLimit = 20, levelKmh = 2.0, eyeH = 1.7, habitat = null, habH = 3, visWeight = 0.5 } = o;
+  const g = stride;
+  const x0 = Math.max(0, Math.min(start.x, goal.x) - pad), x1 = Math.min(T.extentX, Math.max(start.x, goal.x) + pad);
+  const y0 = Math.max(0, Math.min(start.y, goal.y) - pad), y1 = Math.min(T.extentY, Math.max(start.y, goal.y) + pad);
+  const gw = Math.floor((x1 - x0) / g), gh = Math.floor((y1 - y0) / g);
+  if (gw < 2 || gh < 2) return null;
+  const N = gw * gh, cx = (i) => x0 + (i + 0.5) * g, cy = (j) => y0 + (j + 0.5) * g;
+  const slope = new Float32Array(N), hidden = new Uint8Array(N);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+    const k = j * gw + i;
+    const sl = T.slopeDeg(cx(i), cy(j), SLOPE_BASELINE_M);
+    slope[k] = isFinite(sl) ? sl : 90;
+    if (habitat) {
+      const r = lineOfSight(T, cx(i), cy(j), eyeH, habitat.x, habitat.y, habH, { step: 2 });
+      hidden[k] = r.visible === false ? 1 : 0;
+    }
+  }
+  const idx = (p) => ({ i: Math.max(0, Math.min(gw - 1, Math.floor((p.x - x0) / g))), j: Math.max(0, Math.min(gh - 1, Math.floor((p.y - y0) / g))) });
+  const s0 = idx(start), t0 = idx(goal), sK = s0.j * gw + s0.i, tK = t0.j * gw + t0.i;
+  const dist = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1), done = new Uint8Array(N);
+  // binary heap of [cost, node]
+  const heap = [];
+  const push = (c, n) => { heap.push([c, n]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { let l = 2 * i + 1, r = l + 1, m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+  dist[sK] = 0; push(0, sK);
+  const mps = (levelKmh * 1000) / 3600;
+  const nb = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+  while (heap.length) {
+    const [c, k] = pop();
+    if (done[k]) continue; done[k] = 1;
+    if (k === tK) break;
+    const ki = k % gw, kj = (k / gw) | 0;
+    for (const [di, dj] of nb) {
+      const ni = ki + di, nj = kj + dj;
+      if (ni < 0 || nj < 0 || ni >= gw || nj >= gh) continue;
+      const nk = nj * gw + ni;
+      if (done[nk]) continue;
+      const sl = Math.max(slope[k], slope[nk]);
+      if (sl >= slopeLimit && nk !== tK) continue;
+      const step = Math.hypot(di, dj) * g;
+      const f = Math.max(0.05, 1 - Math.min(sl, slopeLimit) / 20);
+      const w = (step / (mps * f)) * (1 + (hidden[nk] ? visWeight : 0));
+      if (c + w < dist[nk]) { dist[nk] = c + w; prev[nk] = k; push(c + w, nk); }
+    }
+  }
+  if (!isFinite(dist[tK])) return null;
+  const pts = [];
+  for (let k = tK; k !== -1; k = prev[k]) pts.push({ x: cx(k % gw), y: cy((k / gw) | 0) });
+  pts.reverse();
+  pts[0] = { x: start.x, y: start.y }; pts[pts.length - 1] = { x: goal.x, y: goal.y };
+  return { points: pts, cost: dist[tK] };
 }

@@ -1,6 +1,6 @@
 # Architecture
 
-Sightline is a data pipeline plus a static browser app. There is no server and no build step.
+Vantage is a data pipeline plus a static browser app. There is no server and no build step.
 
 ```mermaid
 flowchart LR

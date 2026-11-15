@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sightline | Mars EVA visibility planner</title>
+<title>Vantage | Mars EVA visibility planner</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta name="theme-color" content="#0a0c0f">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -11,17 +13,31 @@
   <div class="brand">
     <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2 20 Q9 12 14 18 T30 13" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="23" cy="8" r="2.2" fill="currentColor"/></svg>
     <div>
-      <div class="wordmark">SIGHTLINE</div>
+      <div class="wordmark">VANTAGE</div>
       <div class="tagline">EVA visibility planner &middot; Gale Crater boxwork</div>
     </div>
   </div>
   <div class="chips">
     <span class="chip" id="dataBadge">loading terrain</span>
     <span class="chip warn" id="valChip" title="Predictions are not yet compared with real Curiosity panoramas">Validation: not run</span>
-    <span class="chip" id="sunChip">Sun --</span>
+    <button class="chip btnchip" id="btnTour">Tour</button><span class="chip" id="sunChip">Sun --</span>
   </div>
 </header>
 
+<div id="tourbar" class="tourbar hidden"><div class="tstep" id="tStep"></div><div class="ttext" id="tText"></div><div class="tctl"><button id="tPrev" class="pill">Back</button><button id="tNext" class="pill">Next</button><button id="tEnd" class="pill">Exit tour</button></div></div>
+<div id="welcome" class="welcome"><div class="wcard">
+  <div class="wbrand">VANTAGE</div>
+  <h1>See what a walking astronaut can see, before they walk.</h1>
+  <p>Vantage predicts the view from every step of a Mars EVA route using 1 m NASA terrain at Gale Crater, then flags where home, the rover and the partner drop out of sight, where the sun is low, and whether the walk back still fits the shelter limit.</p>
+  <ul>
+    <li><b>Walker's-eye view.</b> 1 m terrain, not a crater-scale model.</li>
+    <li><b>Real route.</b> The Curiosity boxwork traverse, sols 4605 to 4857.</li>
+    <li><b>Safety first.</b> Slope limits, walk-back time, solar event alert, terrain shadow.</li>
+    <li><b>Plans the route.</b> Slope-limited and visibility-aware, compared with the drawn one.</li>
+  </ul>
+  <div class="wbtn"><button id="wTour" class="primary">Take the 60 second tour</button><button id="wExplore">Explore</button></div>
+  <div class="wnote">Terrain-model predictions, not yet validated against real panoramas. Thresholds are labeled assumptions.</div>
+</div></div>
 <div id="banner" class="banner hidden"></div>
 
 <div class="app">
@@ -33,6 +49,7 @@
     <div class="sep"></div>
     <button id="btnAuto" title="Suggest high points as landmarks"><svg viewBox="0 0 24 24"><path d="M3 19 L9 8 L13 14 L16 10 L21 19 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Auto</span></button>
     <button id="btnTraverse" class="hidden" title="Load the Curiosity traverse inside this window"><svg viewBox="0 0 24 24"><path d="M3 17 C8 17 7 8 12 8 S16 16 21 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Traverse</span></button>
+    <button id="btnPlan" title="Plan a slope-limited route that keeps the habitat in view (needs a habitat and 2+ route points)"><svg viewBox="0 0 24 24"><path d="M4 18 C8 18 8 6 12 6 S16 18 20 18" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3" stroke-linecap="round"/></svg><span>Plan</span></button>
     <button id="btnZoom" title="Toggle zoom to route or full window"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15 L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span id="zoomLbl">Zoom</span></button>
     <button id="btnClear" title="Clear everything"><svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Clear</span></button>
   </nav>
@@ -63,12 +80,22 @@
   </section>
 
   <aside class="side">
+    <div class="verdict" id="verdict" data-level="ok">
+      <div class="vlabel" id="vLabel">CLEAR</div>
+      <div class="vreason" id="vReason">Draw or load a route.</div>
+      <div class="vstats" id="vStats"></div>
+    </div>
     <div class="card">
       <div class="cardhead"><h2>Predicted view</h2><span class="tag" id="panoTag"></span></div>
       <canvas id="pano"></canvas>
       <p class="note" id="panoNote"></p>
     </div>
 
+    <div class="card hidden" id="planCard">
+      <div class="cardhead"><h2>Route comparison</h2><span class="tag">drawn vs planned</span></div>
+      <div id="planBody"></div>
+      <button id="btnUsePlan" class="mode" style="margin-top:8px;width:auto;padding:6px 12px">Use planned route</button>
+    </div>
     <div class="card">
       <div class="cardhead"><h2>Cuff card</h2><span class="tag">next 120 m</span></div>
       <div id="cuffBody" class="cuffgrid">Draw a route (at least 2 points).</div>
@@ -101,6 +128,12 @@
         <div class="field"><label for="habH">Habitat m</label><input type="number" id="habH" value="3" step="0.5" min="0" max="20"></div>
         <div class="field"><label for="thrSun">Low sun below &deg;</label><input type="number" id="thrSun" value="20" step="1" min="0" max="60"></div>
         <div class="field"><label for="blindMin">Blind min m</label><input type="number" id="blindMin" value="20" step="5" min="5" max="200"></div>
+        <div class="field"><label for="shelterMin">Shelter limit min</label><input type="number" id="shelterMin" value="60" step="5" min="10" max="240"></div>
+        <div class="field"><label for="slopeLim">Planner slope &deg;</label><input type="number" id="slopeLim" value="20" step="1" min="5" max="35"></div>
+        <div class="field"><label for="visW">Habitat view weight</label><input type="number" id="visW" value="0.5" step="0.1" min="0" max="5"></div>
+        <div class="field"><label for="posErr">Position error m</label><input type="number" id="posErr" value="5" step="1" min="0" max="50"></div>
+      </div>
+      <div style="padding:6px 0 0"><label class="chk"><input type="checkbox" id="sepAlert"> Solar particle event alert active (walk-back time must fit the shelter limit)</label>
       </div>
     </details>
 

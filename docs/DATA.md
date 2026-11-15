@@ -1,6 +1,6 @@
 # Data
 
-| Data | Provider | Product / endpoint | Resolution | Use in Sightline |
+| Data | Provider | Product / endpoint | Resolution | Use in Vantage |
 |---|---|---|---|---|
 | Topography | USGS Astrogeology Science Center, NASA PDS Annex | `MSL_Gale_DEM_Mosaic_1m_v3` GeoTIFF (Calef and Parker), `asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/Mars/MSL/` | 1 m per pixel, float32 | Line of sight, skyline, slope, hillshade, predicted view |
 | Rover traverse | NASA / JPL MMGIS | MSL waypoints JSON, `mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json` (1389 waypoints through sol 5073 when checked) | per-drive waypoints | Real route to replay; position for validation; sanity check of the DEM |
@@ -30,6 +30,6 @@ python pipeline/fetch_terrain_window.py --center-lonlat 137.38 -4.81 --half-size
 
 The pipeline prints the window, transfer size and QA summary, and writes `web/data/`.
 
-## Vertical reference caveat
+## Georeferencing check
 
-Rover-reported elevations and the DEM may use different vertical datums. `web/data/qa.json` reports the median offset and spread at waypoints. The median is informational. The spread gives a first hint of horizontal misregistration and local relief effects. It is not a formal accuracy statement.
+`web/data/qa.json` compares the DEM with the elevation recorded for each Curiosity waypoint inside the window. On the committed data (160 waypoints) the difference is within about 1 cm at the nearest pixel and about 0.3 m with bilinear sampling. This shows the longitude/latitude to pixel mapping is correct. It is **not** an independent accuracy measurement, because the waypoint elevations appear to come from the same orbital terrain model. Independent checks are in [VALIDATION.md](VALIDATION.md).
