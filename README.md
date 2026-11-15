@@ -19,7 +19,7 @@ Predicts the view along a Mars EVA route on 1 m NASA terrain, flags where home d
 ![NASA Space Apps 2026](https://img.shields.io/badge/NASA%20Space%20Apps-2026-0b3d91?style=flat-square)
 ![Site](https://img.shields.io/badge/site-Gale%20Crater%20boxwork-e0774a?style=flat-square)
 ![Terrain](https://img.shields.io/badge/terrain-USGS%201%20m%20DEM-5b6b7a?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-26%20passing-2e9e78?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-27%20passing-2e9e78?style=flat-square)
 ![Build](https://img.shields.io/badge/build%20step-none-2e9e78?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey?style=flat-square)
 
@@ -100,8 +100,23 @@ Predicted skyline against Curiosity Navcam frames at three stops. The page repor
 | **Start back within** | The smallest margin among the shelter limit (during a solar particle event alert), daylight (Sun below 5 degrees or terrain shadow) and suit time, after subtracting the fastest way home. |
 | **Visibility strip** | Where habitat, rover, partner, landmarks and radio are in view along the whole route, and where nothing is. |
 | **Safety checks** | Slope against the planning limit, ground hidden ahead, low sun, terrain shadow, partner out of sight, and how sensitive habitat visibility is to a position error. |
+| **Dust storm mode** | A dust optical depth slider. Direct sunlight follows Beer-Lambert, so above about tau 2 the sun compass and sharp shadows are gone, the view hazes out, and the flags say which landmarks may be too faint to recognize. |
+| **Verdict confidence** | The location checks are rerun at 8 points around the walker at the assumed position error. The badge says "Robust" or how many nearby points flip the result. |
+| **Real camera check** | One click jumps to a Curiosity stop and draws the skyline traced from the real Navcam frame over the prediction. |
 | **Route planner** | A slope-limited route that keeps the habitat in view, compared with the drawn route on length, time, steepest slope and share of route with the habitat hidden. |
 | **Cuff card** | The numbers a crew member needs on a wrist or tablet display: heading, habitat distance, max slope ahead, next blind stretch, sun, time home, radio gap. |
+
+<br>
+
+## Ask it from an AI assistant (MCP)
+
+`mcp/server.mjs` is a zero-dependency MCP server that exposes the same checks as tools: `eva_check`, `radio_plan`, `plan_route`, `line_of_sight`, `terrain_info`. It runs offline on the local terrain window, which is the point: on Mars, ground support is minutes away by radio, so an onboard assistant has to answer from local data.
+
+```bash
+claude mcp add vantage-mars -- node /path/to/vantage-mars/mcp/server.mjs
+```
+
+Then ask: *"Where was Curiosity on sol 4748, and during a dust storm with tau 4, could an astronaut there see the habitat and get home inside a 20 minute shelter limit?"* Setup and tools: [mcp/README.md](mcp/README.md).
 
 <br>
 
@@ -152,7 +167,7 @@ python pipeline/fetch_terrain_window.py
 cd web && python -m http.server 8000     # open http://localhost:8000
 
 # 3. Tests
-node --test tests/core.test.mjs          # visibility, planner, shelter reach, radio (26 tests)
+node --test tests/core.test.mjs          # visibility, planner, shelter reach, radio (27 tests)
 python tests/test_pipeline.py            # data pipeline on a synthetic GeoTIFF
 node validation/validate.mjs             # rerun the skyline validation
 ```
@@ -169,6 +184,7 @@ web/            Static app, no build step
   data/         Processed terrain window, traverse and validation results
 pipeline/       Windowed read of the USGS DEM and MMGIS waypoints
 validation/     Skyline comparison against Curiosity Navcam frames
+mcp/            MCP server exposing the checks to AI assistants (no dependencies)
 tests/          JS core tests and a Python pipeline test
 docs/           Methodology, architecture, data, validation, limitations, references
 .github/        CI and GitHub Pages deployment

@@ -274,3 +274,19 @@ test("hiddenGroundAhead: a hazard height changes the hidden fraction", () => {
   const b = hiddenGroundAhead(T, 100, 200, 90, 1.7, 40, 60, 0.3);
   assert.ok(b.hiddenFraction <= a.hiddenFraction && a.hiddenFraction > 0, "taller hazards are easier to see");
 });
+
+test("MCP server answers initialize, tools/list and an eva_check call", { skip: !fs.existsSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "web", "data", "dem.f32")) }, async () => {
+  const { spawn } = await import("node:child_process");
+  const p = spawn(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "mcp", "server.mjs")]);
+  let out = ""; p.stdout.on("data", (d) => (out += d));
+  const send = (m) => p.stdin.write(JSON.stringify(m) + "\n");
+  send({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "1" } } });
+  send({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+  send({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "eva_check", arguments: { sol: 4748 } } });
+  for (let i = 0; i < 100 && out.trim().split("\n").length < 3; i++) await new Promise((r) => setTimeout(r, 100));
+  p.kill();
+  const msgs = out.trim().split("\n").map((l) => JSON.parse(l));
+  assert.equal(msgs[0].result.serverInfo.name, "vantage-mars");
+  assert.ok(msgs[1].result.tools.some((t) => t.name === "eva_check"));
+  assert.ok(isFinite(msgs[2].result.structuredContent.fastest_return_min));
+});

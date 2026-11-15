@@ -215,3 +215,7 @@ body{font-variant-numeric:tabular-nums}
   .lower #strip{height:318px;max-height:none;flex:none}
 }
 .vbtns{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}.vbtns .note{margin:0 4px 0 0}
+
+.vtop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.vconf{font:600 11px var(--mono);padding:4px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--mute);white-space:nowrap}
+.vconf.robust{color:var(--ok);border-color:rgba(95,211,154,.4)}.vconf.fragile{color:var(--warn);border-color:rgba(245,185,74,.5)}

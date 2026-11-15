@@ -80,6 +80,12 @@ Walking time uses a deliberately simple model: level speed 2 km/h, derated linea
 - `radioCoverage` tests geometric line of sight between a 3 m habitat mast and a 1.7 m suit antenna at each route sample (2 m steps along the ray) and reports the longest outage. `relaySites` tries candidate sites on a 25 m grid, keeps those that see the habitat mast, and greedily picks the sites that cover the most uncovered samples (relay height 2.5 m). Not a link budget: no diffraction, ground reflection, Fresnel clearance or antenna pattern. Real links can work somewhat beyond geometric line of sight and can fail with marginal clearance.
 - Hidden-ground flag now tests a 0.3 m hazard within 25 m ahead (it was a 0 m target within 50 m, which flagged almost every point on the 1 m DEM).
 
+## 10c. Dust, verdict confidence and the MCP server
+
+- Dust: direct sun transmission is `exp(-tau / sin(el))` (Beer-Lambert, plane-parallel). Below 10 percent the app flags that shadows and the sun compass are not usable. Visual range for a 2 percent contrast threshold is `ln(50) H / tau` with an assumed uniform dust scale height H = 11 km; near-surface dust can be denser, so this is an upper bound. The predicted view raises its haze with tau (cosmetic depth cue).
+- Verdict confidence: the location-dependent HOLD checks (slope over 20 degrees, nothing in view) are rerun at 8 points on a circle with radius equal to the assumed position error (default 5 m). "Robust" means all 8 agree with the current point.
+- MCP server (`mcp/server.mjs`): the same functions as the app, loaded in Node on the same terrain and default scene, exposed as tools over the Model Context Protocol (JSON-RPC over stdio). No network access, no dependencies.
+
 ## 11. Terrain shadow
 
 For a point, a ray is marched toward the Sun (azimuth and elevation from section 8) up to 2 km. If the terrain along the ray rises above the Sun's elevation angle, with curvature correction, the point is in terrain shadow. Sun below the horizon counts as shadow. Rays that leave the terrain window are treated as lit, which is a simplification. Object shadows below the DEM cell size are not modeled.

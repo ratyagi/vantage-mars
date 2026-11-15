@@ -9,6 +9,7 @@
     "test": "node --test tests/core.test.mjs",
     "test:pipeline": "python tests/test_pipeline.py",
     "data": "python pipeline/fetch_terrain_window.py",
-    "serve": "cd web && python -m http.server 8000"
+    "serve": "cd web && python -m http.server 8000",
+    "mcp": "node mcp/server.mjs"
   }
 }

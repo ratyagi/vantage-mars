@@ -92,7 +92,7 @@
 
   <aside class="side">
     <div class="verdict" id="verdict" data-level="ok">
-      <div class="vlabel" id="vLabel">NOMINAL</div>
+      <div class="vtop"><div class="vlabel" id="vLabel">NOMINAL</div><span class="vconf" id="vConf" title="Verdict rerun at 8 points around you, at the assumed position error"></span></div>
       <div class="vreason" id="vReason">Draw or load a route.</div>
       <div class="vstats" id="vStats"></div>
     </div>
@@ -114,6 +114,7 @@
 
     <details class="card" open>
       <summary><h2>Conditions</h2></summary>
+      <div class="field"><label for="tau">Dust optical depth &tau; <output id="oTau"></output></label><input type="range" id="tau" min="0.3" max="6" step="0.1" value="0.6"></div>
       <div class="field"><label for="ltst">Local true solar time <output id="oLtst"></output></label><input type="range" id="ltst" min="6" max="18" step="0.25" value="9"></div>
       <div class="field"><label for="ls">Solar longitude Ls <output id="oLs"></output></label><input type="range" id="ls" min="0" max="360" step="1" value="90"></div>
       <div class="field"><label for="lookMode">Look direction</label>

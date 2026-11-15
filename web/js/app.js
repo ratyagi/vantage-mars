@@ -2,7 +2,7 @@ import { Terrain, makeSyntheticTerrain, hillshade } from "./terrain.js";
 import { sunPosition } from "./sun.js";
 import {
   sampleRoute, routeVisibility, blindRuns, skyline, hiddenGroundAhead,
-  viewshed, renderPanorama, costField, daylightLeftMin, radioCoverage, relaySites, walkMinutes, cumulativeWalkMinutes, inTerrainShadow, visibilityFraction, planRoute, azimuthDeg, suggestLandmarks, SLOPE_BASELINE_M,
+  viewshed, renderPanorama, costField, daylightLeftMin, radioCoverage, relaySites, sunTransmission, visualRangeM, lineOfSight, walkMinutes, cumulativeWalkMinutes, inTerrainShadow, visibilityFraction, planRoute, azimuthDeg, suggestLandmarks, SLOPE_BASELINE_M,
 } from "./visibility.js";
 
 const $ = (id) => document.getElementById(id);
@@ -311,6 +311,7 @@ function recompute() {
   refreshSafety();
   S.runs = S.rows.length ? blindRuns(S.rows, targets(), +$("blindMin").value) : [];
   $("oLtst").textContent = (+$("ltst").value).toFixed(2);
+  $("oTau").textContent = (+$("tau").value).toFixed(1);
   $("oLs").textContent = $("ls").value;
   $("oFov").textContent = $("fov").value;
   $("oAz").textContent = $("lookAz").value;
@@ -393,7 +394,7 @@ function drawPanoOn(c, ratio) {
   const cur = currentSample();
   if (!cur) { ctx.fillStyle = "#0b0e12"; ctx.fillRect(0, 0, W, H); return; }
   const sun = sunNow(), az = lookAz(), fov = +$("fov").value;
-  const p = renderPanorama(S.T, cur.x, cur.y, +$("eyeH").value, az, fov, W, H, sun, { angMin: -30, angMax: 20 });
+  const p = renderPanorama(S.T, cur.x, cur.y, +$("eyeH").value, az, fov, W, H, sun, { angMin: -30, angMax: 20, haze: Math.max(1 / 6000, +$("tau").value / 11000 * 3) });
   ctx.putImageData(new ImageData(p.pixels, W, H), 0, 0);
   ctx.setTransform(d, 0, 0, d, 0, 0); // draw annotations in CSS pixels
   const colOf = (b) => ((((b - az + 540) % 360) - 180) / fov + 0.5) * CW;
@@ -481,6 +482,13 @@ function flags() {
   const sun = sunNow(), thr = +$("thrSun").value;
   if (sun.elevDeg < 0) add("bad", "Sun is below the horizon at this time.", "geometry");
   else if (sun.elevDeg < thr) add("warn", `Low sun (${sun.elevDeg.toFixed(1)} deg, below ${thr} deg): slopes and shadows are easy to misjudge.`, "lunar-derived threshold, assumption");
+  const tau = +$("tau").value;
+  if (tau >= 1.5) {
+    const tr = sunTransmission(tau, sun.elevDeg), vr = visualRangeM(tau);
+    const far = targets().filter((t) => cur.vis[t.id]?.visible === true && cur.vis[t.id].dist > vr * 0.25);
+    if (tr < 0.1 && sun.elevDeg > 0) add("warn", `Dust (tau ${tau.toFixed(1)}): only ${(tr * 100).toFixed(1)}% of direct sunlight gets through, so no sharp shadows and no sun compass. Navigate by landmarks${far.length ? ", but " + far.map((t) => t.short || t.name).join(", ") + " may be too faint to recognize" : ""}.`, "Beer-Lambert, assumed 11 km dust scale height");
+    else add("warn", `Dust (tau ${tau.toFixed(1)}): direct sunlight ${(tr * 100).toFixed(0)}%, estimated visual range ${(vr / 1000).toFixed(1)} km.`, "Beer-Lambert, assumed 11 km dust scale height");
+  }
   const h = hiddenGroundAhead(S.T, cur.x, cur.y, cur.heading, +$("eyeH").value, 25, 60, 0.3);
   if (h.hiddenFraction > 0.25) add("warn", `A 0.3 m hazard would be hidden on ${(h.hiddenFraction * 100).toFixed(0)}% of the ground within 25 m ahead, first at ${h.firstHiddenDist} m.`, "geometry, Apollo 16 pattern, assumed hazard height");
   const sl = S.T.slopeDeg(cur.x, cur.y, SLOPE_BASELINE_M);
@@ -514,7 +522,24 @@ function flags() {
   verdict(worst, why, cur);
 }
 
+// Rerun the geometric checks at 8 points around the walker at the assumed position error.
+function pointHold(x, y) {
+  const T = S.T;
+  if (T.slopeDeg(x, y, SLOPE_BASELINE_M) > 20) return true;
+  const tg = targets(), eye = +$("eyeH").value;
+  return tg.length > 0 && !tg.some((t) => lineOfSight(T, x, y, eye, t.x, t.y, t.h, { step: 2 }).visible === true);
+}
+// Rerun the location-dependent HOLD checks (slope over 20 deg, nothing in view) at 8 points at the assumed position error.
+function confidence(cur) {
+  const el = $("vConf"); if (!cur) { el.textContent = ""; el.className = "vconf"; return; }
+  const r = +$("posErr").value || 5, here = pointHold(cur.x, cur.y);
+  let diff = 0;
+  for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; if (pointHold(cur.x + r * Math.cos(a), cur.y + r * Math.sin(a)) !== here) diff++; }
+  if (!diff) { el.textContent = `Robust within ${r} m`; el.className = "vconf robust"; el.title = `The slope and line-of-sight checks give the same answer at 8 points ${r} m around you (assumed position error).`; }
+  else { el.textContent = here ? `Clears at ${diff}/8 within ${r} m` : `HOLD at ${diff}/8 within ${r} m`; el.className = "vconf fragile"; el.title = `Within ${r} m (assumed position error), ${diff} of 8 nearby points ${here ? "pass" : "fail"} the slope or line-of-sight check. Treat this spot with care.`; }
+}
 function verdict(worst, why, cur) {
+  confidence(cur);
   const v = $("verdict"), lvl = ["ok", "warn", "bad"][worst];
   v.dataset.level = lvl;
   $("vLabel").textContent = ["NOMINAL", "CAUTION", "HOLD"][worst];
@@ -617,7 +642,7 @@ function bind() {
     if (w.length) { S.habitat = { x: w[0].x_m, y: w[0].y_m }; }
     fitView(); setupMap(); recompute();
   };
-  for (const id of ["pos", "ltst", "ls", "lookMode", "lookAz", "fov"]) $(id).addEventListener("input", () => { if (id === "ltst" || id === "ls") drawHillshade(); recompute(); });
+  for (const id of ["pos", "ltst", "tau", "ls", "lookMode", "lookAz", "fov"]) $(id).addEventListener("input", () => { if (id === "ltst" || id === "ls") drawHillshade(); recompute(); });
   for (const id of ["eyeH", "partnerGap", "landH", "habH", "thrSun", "blindMin", "showView", "showSlope", "showReach", "showRadio", "evaMin", "reserveMin", "relayH", "sepAlert", "shelterMin", "posErr"]) $(id).addEventListener("input", recompute);
   map.addEventListener("mousemove", (ev) => {
     const p = pickXY(ev), z = S.T.heightAt(p.x, p.y), sl = S.T.slopeDeg(p.x, p.y);
@@ -690,6 +715,7 @@ function showRealCamera(i) {
   if (bd > 40) return;
   let bc = 0, bn = -1;
   for (let c = 0; c < 360; c += 5) { const n = stop.columns.filter((q) => Math.abs(((q.az - c + 540) % 360) - 180) <= 55).length; if (n > bn) { bn = n; bc = c; } }
+  { const inw = stop.columns.filter((q) => Math.abs(((q.az - bc + 540) % 360) - 180) <= 55); if (inw.length) bc = Math.round((bc + inw.reduce((t, q) => t + (((q.az - bc + 540) % 360) - 180), 0) / inw.length + 360) % 360); }
   S.real = { stop };
   $("lookMode").value = "manual"; $("lookAz").value = bc; $("pos").value = Math.round((best / (S.rows.length - 1)) * 1000);
   recompute();
@@ -723,11 +749,12 @@ function heroStop() { clearInterval(heroTimer); heroTimer = null; $("pos").value
 // ---------- guided tour ----------
 const TOUR = [
   { t: "Real Curiosity boxwork route on 1 m NASA terrain. The verdict, predicted view and timeline update at every step.", go: () => setPos(0) },
-  { t: "A blind stretch: from here the habitat, rover and summits are all out of sight. This is where an astronaut has nothing to navigate by.", go: () => { const r = S.runs[0] || null; const tot = S.rows.length ? S.rows[S.rows.length - 1].s : 1; setPos(r ? ((r.from + r.length / 2) / tot) * 1000 : 400); } },
+  { t: () => { const c = currentSample(); if (!c) return ""; const vis = targets().filter((t) => c.vis[t.id]?.visible === true).map((t) => t.name); const hid = targets().filter((t) => c.vis[t.id]?.visible === false).map((t) => t.name); return S.runs.length || !vis.length ? "Nothing to navigate by here: habitat, rover, partner and every landmark are out of sight. The badge on the verdict shows that a 5 m position error decides it, which is the point: in terrain like this you cannot count on the view." : `Out of sight of home: ${hid.join(", ")} ${hid.length > 1 ? "are" : "is"} hidden here. Only ${vis.join(" and ") || "nothing"} keeps the walker oriented. The strip below shows how often this happens along the route.`; }, go: () => { const tot = S.rows.length ? S.rows[S.rows.length - 1].s : 1; const r = S.runs[0]; if (r) { setPos(((r.from + r.length / 2) / tot) * 1000); return; } let bi = 0, bn = 99; S.rows.forEach((row, i) => { if (row.vis.hab?.visible !== false) return; const n = targets().filter((t) => row.vis[t.id]?.visible === true).length; if (n < bn) { bn = n; bi = i; } }); setPos((bi / Math.max(1, S.rows.length - 1)) * 1000); } },
   { t: "Walker view: the full-screen predicted view from the walker's eye height, with the verdict underneath. Arrow keys walk the route.", go: () => { walkerOpen(); } },
   { t: "Same spot, low sun (about 06:30 local time). Slopes and shadows flatten out and the flags warn about it.", go: () => { $("ltst").value = 6.5; drawHillshade(); recompute(); } },
   { t: () => `Solar particle event alert with a 20 minute shelter limit. The contours show the fastest way home, bending around steep ground. From here it takes ${(returnMin(currentSample()) || 0).toFixed(0)} min, over the limit, so the verdict is HOLD. Retracing the drawn route would take ${(S.cum[S.rows.indexOf(currentSample())] || 0).toFixed(0)} min.`, go: () => { $("sepAlert").checked = true; $("shelterMin").value = 20; setPos(950); } },
   { t: () => S.radio && S.relay?.picks?.length ? `Radio shadow: terrain blocks line of sight to the habitat on ${Math.round((1 - S.radio.coveredFrac) * 100)}% of the route, up to ${S.radio.worst.len.toFixed(0)} m in a row. One relay at R1 (${S.relay.picks[0].dHab.toFixed(0)} m from the habitat) would cover ${Math.round(S.relay.picks[0].coveredFrac * 100)}%. Geometry only, not a link budget.` : "Radio shadow: where terrain blocks line of sight to the habitat.", go: () => { $("showRadio").checked = true; setPos(800); } },
+  { t: () => `Dust storm, optical depth 4. Direct sunlight drops to ${(sunTransmission(4, sunNow().elevDeg) * 100).toFixed(1)}%, so shadows and the sun compass are gone and the view hazes out. The badge on the verdict says whether it holds within the assumed position error.`, go: () => { $("tau").value = 4; setPos(400); } },
   { t: "The planner finds a slope-limited route that keeps the habitat in view and compares it with the drawn one.", go: () => { $("sepAlert").checked = false; $("shelterMin").value = 60; setPos(300); $("btnPlan").click(); } },
   { t: () => "Real camera check. Blue dots are the skyline traced from a real Curiosity Navcam frame at sol 4748, white is the Vantage prediction: 0.43 degrees of error. Toward the far crater rim at sol 4634 the prediction is about 5 degrees low, and the validation panel shows that too.", go: () => { showRealCamera(1); } },
 ];
@@ -740,7 +767,7 @@ function tourShow(i) {
   $("tStep").textContent = `${tourI + 1} / ${TOUR.length}`;
   $("tNext").textContent = tourI === TOUR.length - 1 ? "Finish" : "Next";
   walkerClose();
-  $("ltst").value = TOURSTATE.ltst; $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false; $("lookMode").value = "travel"; S.real = null;
+  $("ltst").value = TOURSTATE.ltst; $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false; $("lookMode").value = "travel"; S.real = null; $("tau").value = 0.6;
   drawHillshade();
   TOUR[tourI].go();
   const tt = TOUR[tourI].t; $("tText").textContent = typeof tt === "function" ? tt() : tt;
@@ -754,7 +781,7 @@ function tourStart() {
 function tourEnd() {
   walkerClose();
   $("tourbar").classList.add("hidden"); tourI = -1;
-  $("ltst").value = TOURSTATE.ltst; drawHillshade(); $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false; $("lookMode").value = "travel"; S.real = null; recompute();
+  $("ltst").value = TOURSTATE.ltst; drawHillshade(); $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false; $("lookMode").value = "travel"; S.real = null; $("tau").value = 0.6; recompute();
 }
 $("wTour").onclick = () => { heroStop(); tourStart(); };
 $("wExplore").onclick = () => { heroStop(); $("welcome").classList.add("hidden"); };

@@ -200,7 +200,7 @@ export function renderPanorama(T, ox, oy, eyeH, azCenterDeg, fovDeg, W, H, sun, 
       const nl = Math.hypot(gx, gy, 1);
       const lam = Math.max(0, (-gx * L[0] - gy * L[1] + L[2]) / nl);
       const shade = 0.18 + 0.82 * lam;
-      const fog = 1 - Math.exp(-d / 6000); // depth cue only; NOT an atmospheric model
+      const fog = 1 - Math.exp(-d * (opts.haze ?? 1 / 6000)); // depth cue only; dust mode raises it. NOT a radiative transfer model
       const r = Math.round((190 * shade) * (1 - fog) + sky[0] * fog);
       const g = Math.round((128 * shade) * (1 - fog) + sky[1] * fog);
       const b = Math.round((92 * shade) * (1 - fog) + sky[2] * fog);
@@ -464,3 +464,9 @@ export function relaySites(T, rows, hab, habMastH, o = {}) {
   }
   return { before, picks, candidates: cands.length };
 }
+
+// Dust: direct-beam sun transmission exp(-tau / sin(el)) (Beer-Lambert, plane-parallel). Used for the sun-compass check.
+export function sunTransmission(tau, elevDeg) { return elevDeg <= 0 ? 0 : Math.exp(-tau / Math.sin(elevDeg * Math.PI / 180)); }
+// Horizontal visual range for a dark target at 2% contrast threshold, with dust spread over an assumed scale height.
+// V = ln(50) / beta, beta = tau / H. Assumption: uniform mixing over H (default 11 km); near-surface dust can be denser.
+export function visualRangeM(tau, H = 11000) { return tau > 0 ? Math.log(50) * H / tau : Infinity; }
