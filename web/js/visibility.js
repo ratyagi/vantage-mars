@@ -3,6 +3,7 @@
 // Every height and threshold here is an ASSUMPTION exposed to the UI; none is a validated Mars value.
 
 export const MARS_R = 3396190; // m, radius in the USGS product metadata
+export const SLOPE_BASELINE_M = 5; // slope is evaluated over 5 m, closer to rover and walker scale than one 1 m cell
 const RAD = Math.PI / 180;
 
 export const curvDrop = (d) => (d * d) / (2 * MARS_R);
@@ -148,19 +149,22 @@ export function hiddenGroundAhead(T, ox, oy, headingDeg, eyeH = 1.7, range = 50,
   return { hiddenFraction: total ? hidden / total : NaN, firstHiddenDist: firstHidden, samples: total };
 }
 
-// Viewshed over a coarse grid (for the map overlay). Returns Uint8Array: 1 visible, 0 hidden, 2 no data.
-export function viewshed(T, ox, oy, eyeH, targetH = 0, stride = 4, maxRange = 1500) {
-  const gw = Math.floor(T.width / stride), gh = Math.floor(T.height / stride);
+// Viewshed over a coarse grid (for the map overlay). Returns Uint8Array: 1 visible, 0 hidden, 2 no data / out of range.
+// bounds {x0,y0,x1,y1} in metres limits the grid (default: whole terrain).
+export function viewshed(T, ox, oy, eyeH, targetH = 0, stride = 4, maxRange = 1500, bounds = null) {
+  const b = bounds || { x0: 0, y0: 0, x1: T.extentX, y1: T.extentY };
+  const cs = stride * T.cell;
+  const gw = Math.max(1, Math.floor((b.x1 - b.x0) / cs)), gh = Math.max(1, Math.floor((b.y1 - b.y0) / cs));
   const out = new Uint8Array(gw * gh);
   for (let j = 0; j < gh; j++) {
     for (let i = 0; i < gw; i++) {
-      const x = (i + 0.5) * stride * T.cell, y = (j + 0.5) * stride * T.cell;
+      const x = b.x0 + (i + 0.5) * cs, y = b.y0 + (j + 0.5) * cs;
       if (Math.hypot(x - ox, y - oy) > maxRange) { out[j * gw + i] = 2; continue; }
       const r = lineOfSight(T, ox, oy, eyeH, x, y, targetH, { step: Math.max(T.cell, 1) });
       out[j * gw + i] = r.visible === null ? 2 : r.visible ? 1 : 0;
     }
   }
-  return { grid: out, gw, gh, stride };
+  return { grid: out, gw, gh, stride, x0: b.x0, y0: b.y0, cellM: cs };
 }
 
 // Predicted terrain view (painter's algorithm near to far, running maximum elevation angle).
@@ -212,9 +216,47 @@ export function walkMinutes(T, rows, levelKmh = 2.0, limitDeg = 20) {
   let sec = 0;
   for (let i = 1; i < rows.length; i++) {
     const d = rows[i].s - rows[i - 1].s;
-    const sl = T.slopeDeg((rows[i].x + rows[i - 1].x) / 2, (rows[i].y + rows[i - 1].y) / 2);
+    const sl = T.slopeDeg((rows[i].x + rows[i - 1].x) / 2, (rows[i].y + rows[i - 1].y) / 2, SLOPE_BASELINE_M);
     const f = isFinite(sl) ? Math.max(0.05, 1 - sl / limitDeg) : 1;
     sec += d / ((levelKmh * 1000 / 3600) * f);
   }
   return sec / 60;
+}
+
+// Suggest landmarks: local summits that stand clear of their surroundings, near the route but not on it,
+// away from the window edge (where the DEM has no neighbours), and well separated from one another.
+export function suggestLandmarks(T, route, o = {}) {
+  const { n = 4, radius = 120, minRelief = 6, margin = 100, minRoute = 40, maxRoute = 700, minSep = 250, step = 10 } = o;
+  const pts = route && route.length ? route : [{ x: T.extentX / 2, y: T.extentY / 2 }];
+  const dirs = 16, rings = [radius / 3, (2 * radius) / 3, radius];
+  const cand = [];
+  for (let y = margin; y < T.extentY - margin; y += step) {
+    for (let x = margin; x < T.extentX - margin; x += step) {
+      const z = T.heightAt(x, y);
+      if (!isFinite(z)) continue;
+      let ok = true, zmin = z;
+      for (const r of rings) {
+        for (let k = 0; k < dirs && ok; k++) {
+          const a = (k / dirs) * 2 * Math.PI;
+          const zz = T.heightAt(x + Math.cos(a) * r, y + Math.sin(a) * r);
+          if (!isFinite(zz)) continue;
+          if (zz > z) ok = false;
+          if (zz < zmin) zmin = zz;
+        }
+        if (!ok) break;
+      }
+      if (!ok || z - zmin < minRelief) continue;
+      let dr = Infinity;
+      for (const p of pts) { const d = Math.hypot(p.x - x, p.y - y); if (d < dr) dr = d; }
+      if (dr < minRoute || dr > maxRoute) continue;
+      cand.push({ x, y, relief: z - zmin, distRoute: dr });
+    }
+  }
+  cand.sort((a, b) => b.relief - a.relief);
+  const out = [];
+  for (const c of cand) {
+    if (out.every((o2) => Math.hypot(o2.x - c.x, o2.y - c.y) >= minSep)) out.push(c);
+    if (out.length >= n) break;
+  }
+  return out;
 }

@@ -16,7 +16,7 @@ Given a route across Mars terrain, an observer at eye height, and a set of targe
 ## 3. Terrain sampling
 
 - Elevation at an arbitrary point uses bilinear interpolation between the four nearest cell centres. If any neighbour is no-data, the result is no-data and the sample is excluded.
-- Slope is the angle of the central-difference gradient over one cell: `slope = atan(|grad z|)`.
+- Slope is the angle of the central-difference gradient: `slope = atan(|grad z|)`. Flags, the slope overlay and walking time evaluate it over a 5 m baseline, closer to the scale of a walker or rover than one 1 m cell, which is sensitive to DEM noise.
 
 ## 4. Line of sight
 
@@ -29,7 +29,11 @@ For observer `A` and target `B`, separated by horizontal distance `D`:
 
 Curvature matters little at EVA scales (about 1.5 mm at 100 m, about 1.3 m at 3 km) but is included so results stay valid for long sight lines to distant landmarks.
 
-## 5. Route products
+## 5. Route products and defaults
+
+- **Default scene (real data):** the route is the Curiosity drive recorded in the boxwork campaign (sols 4605 to 4857, about 1 km), the habitat marker is its start, and the rover marker is the third waypoint. This lets a reviewer see the tool on a real traverse. Any route can be drawn instead.
+- **Landmark suggestion:** summits that stand at least 6 m above their surroundings within a 120 m radius, between 40 and 700 m from the route, at least 100 m from the window edge and at least 250 m apart. This is a convenience for demonstrating visibility. Real planning would choose landmarks by science and navigation value.
+
 
 - **Resampling:** the drawn polyline is resampled at 10 m spacing with cumulative distance `s` and local heading.
 - **Visibility strip:** for each sample and each target, line of sight is evaluated. Rows are rendered per target along `s`.

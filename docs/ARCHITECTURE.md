@@ -45,6 +45,6 @@ Keeping `visibility.js` free of DOM code lets it be unit tested in Node and reus
 
 ## Testing
 
-- `tests/core.test.mjs`: 12 unit tests covering line of sight (flat, wall, low ridge), curvature, azimuth, sun geometry, route resampling, skyline, hidden ground, blind stretches, panorama-versus-skyline agreement, and walking time.
+- `tests/core.test.mjs`: 15 tests covering line of sight (flat, wall, low ridge), curvature, azimuth, sun geometry, route resampling, skyline, hidden ground, blind stretches, panorama-versus-skyline agreement, walking time, slope baseline smoothing and landmark suggestion. When the real terrain window is present, one test also checks the real grid, that suggested landmarks fall on valid data, and that the traverse has visible landmarks.
 - `tests/test_pipeline.py`: builds a synthetic GeoTIFF with the same layout as the USGS product, runs the pipeline on it, and checks outputs and the `synthetic` flag.
 - CI runs both on every push. The demo deploys from `web/` with GitHub Pages.

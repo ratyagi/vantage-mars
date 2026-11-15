@@ -39,16 +39,17 @@ export class Terrain {
     return x >= this.cell && y >= this.cell && x < this.extentX - this.cell && y < this.extentY - this.cell;
   }
 
-  // Surface gradient: dz/dEast, dz/dNorth (north = -y).
-  gradient(x, y) {
-    const h = this.cell;
+  // Surface gradient: dz/dEast, dz/dNorth (north = -y), central difference over `baseline` metres.
+  gradient(x, y, baseline = this.cell) {
+    const h = baseline;
     const zE = this.heightAt(x + h, y), zW = this.heightAt(x - h, y);
     const zS = this.heightAt(x, y + h), zN = this.heightAt(x, y - h);
     return [(zE - zW) / (2 * h), (zN - zS) / (2 * h)];
   }
 
-  slopeDeg(x, y) {
-    const [gx, gy] = this.gradient(x, y);
+  // Slope in degrees. Use a baseline of a few metres for rover/suited-walker scale; one cell is sensitive to DEM noise.
+  slopeDeg(x, y, baseline = this.cell) {
+    const [gx, gy] = this.gradient(x, y, baseline);
     if (!isFinite(gx) || !isFinite(gy)) return NaN;
     return (Math.atan(Math.hypot(gx, gy)) * 180) / Math.PI;
   }

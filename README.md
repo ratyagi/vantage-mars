@@ -84,7 +84,7 @@ docs/           Methodology, architecture, data, validation, limitations, refere
 
 ## Status
 
-- Working: visibility core, route products, predicted view, UI, data pipeline, automated tests.
+- Working: visibility core, route products, predicted view, UI (zoom to route, scrubbing, playback), data pipeline, 15 JS tests and a pipeline test.
 - Validation against real Curiosity panoramas: see [docs/VALIDATION.md](docs/VALIDATION.md) for protocol and current results.
 - Every threshold and height in the app is an editable assumption with its basis stated in [docs/METHODOLOGY.md](docs/METHODOLOGY.md#assumption-register). None is a measured Mars value unless stated.
 

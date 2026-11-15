@@ -1,10 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Terrain, makeSyntheticTerrain } from "../web/js/terrain.js";
 import { sunPosition } from "../web/js/sun.js";
 import {
   lineOfSight, sampleRoute, routeVisibility, blindRuns, skyline,
-  hiddenGroundAhead, renderPanorama, curvDrop, azimuthDeg, walkMinutes,
+  hiddenGroundAhead, renderPanorama, curvDrop, azimuthDeg, walkMinutes, suggestLandmarks,
 } from "../web/js/visibility.js";
 
 function flat(w = 400, h = 400, cell = 1, z = 0) {
@@ -116,4 +119,45 @@ test("synthetic terrain builds, has relief, and walk time is positive", () => {
   assert.ok(T.slopeDeg(300, 300) >= 0);
   const rows = sampleRoute([{ x: 50, y: 50 }, { x: 500, y: 400 }], 10);
   assert.ok(walkMinutes(T, rows) > 5);
+});
+
+test("slope over a longer baseline smooths cell-scale noise", () => {
+  const T = flat();
+  let seed = 7; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  for (let k = 0; k < T.data.length; k++) T.data[k] = rnd() * 1.0; // 1 m scale noise, 1 m amplitude
+  const fine = T.slopeDeg(200, 200, 1), coarse = T.slopeDeg(200, 200, 5);
+  assert.ok(fine > 5, `fine ${fine}`);
+  assert.ok(coarse < fine, `coarse ${coarse} should be below fine ${fine}`);
+});
+
+test("suggestLandmarks: picks a clear summit near the route, away from edges", () => {
+  const T = withBlock(flat(600, 600, 2), 600, 640, 600, 640, 25); // 25 m block summit at (600..640)
+  const route = [{ x: 300, y: 620 }, { x: 500, y: 620 }];
+  const lm = suggestLandmarks(T, route, { n: 2, margin: 100, maxRoute: 500 });
+  assert.ok(lm.length >= 1);
+  assert.ok(lm.every((c) => c.x >= 100 && c.x <= T.extentX - 100 && c.y >= 100 && c.y <= T.extentY - 100));
+  assert.ok(Math.hypot(lm[0].x - 620, lm[0].y - 620) < 40, `got ${lm[0].x},${lm[0].y}`);
+});
+
+// Runs only when the real terrain window is present (after running the pipeline).
+const here = path.dirname(fileURLToPath(import.meta.url));
+const demJson = path.join(here, "..", "web", "data", "dem.json");
+test("real terrain window (if present): sane grid, landmarks valid, route visible", { skip: !fs.existsSync(demJson) }, () => {
+  const meta = JSON.parse(fs.readFileSync(demJson, "utf8"));
+  if (meta.synthetic) return;
+  const buf = fs.readFileSync(path.join(here, "..", "web", "data", "dem.f32"));
+  const data = new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4);
+  assert.equal(data.length, meta.width * meta.height);
+  const T = new Terrain(meta.width, meta.height, meta.cell_m, data, meta);
+  const wp = JSON.parse(fs.readFileSync(path.join(here, "..", "web", "data", "route.json"), "utf8")).waypoints.filter((w) => w.inside);
+  assert.ok(wp.length > 20);
+  const route = wp.map((w) => ({ x: w.x_m, y: w.y_m }));
+  const lm = suggestLandmarks(T, route);
+  assert.ok(lm.length >= 2, "expected at least 2 landmarks");
+  for (const c of lm) assert.ok(isFinite(T.heightAt(c.x, c.y)));
+  const rows = routeVisibility(T, sampleRoute(route, 10), lm.map((c, i) => ({ id: "L" + i, name: "L", kind: "landmark", x: c.x, y: c.y, h: 2 })), { eyeH: 1.7 });
+  const anyVisible = rows.some((r) => Object.values(r.vis).some((v) => v.visible === true));
+  const anyUnknown = rows.some((r) => Object.values(r.vis).some((v) => v.visible === null));
+  assert.ok(anyVisible, "some landmark should be visible somewhere on the route");
+  assert.ok(!anyUnknown, "no target should fall on missing data");
 });

@@ -7,7 +7,7 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
-body{display:flex;flex-direction:column;overflow:hidden}
+body{display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
 h2{margin:0;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
 .hidden{display:none !important}
 
@@ -24,7 +24,7 @@ h2{margin:0;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:u
 .banner{flex:none;margin:8px 16px 0;padding:8px 12px;border-radius:8px;background:#241214;border:1px solid #6a2a2a;color:#f3b9b9;font-size:12px}
 
 /* layout */
-.app{flex:1;min-height:0;display:grid;grid-template-columns:64px minmax(0,1fr) 430px;gap:12px;padding:12px 16px 16px}
+.app{flex:1;min-height:max(760px,calc(100vh - 54px));display:grid;grid-template-columns:64px minmax(0,1fr) 430px;gap:12px;padding:12px 16px 16px}
 .tools{display:flex;flex-direction:column;gap:6px;padding:8px 6px;background:var(--s1);border:1px solid var(--line);border-radius:12px;align-self:start}
 .tools button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;border-radius:8px;background:transparent;border:1px solid transparent;color:var(--mute);cursor:pointer;font:500 10px var(--sans)}
 .tools button svg{width:20px;height:20px}
@@ -32,10 +32,10 @@ h2{margin:0;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:u
 .tools button.active{color:#1a0f09;background:var(--accent)}
 .tools .sep{height:1px;background:var(--line);margin:4px 6px}
 .center{min-height:0;display:flex;flex-direction:column;gap:12px}
-.mapwrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#07090b;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.mapwrap{position:relative;flex:1;min-height:460px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px;background:#07090b;border:1px solid var(--line);border-radius:12px;overflow:hidden}
 #map{cursor:crosshair;border-radius:6px;box-shadow:0 0 0 1px var(--line2)}
 .hover{position:absolute;left:10px;top:10px;padding:4px 8px;border-radius:6px;background:rgba(10,12,15,.78);border:1px solid var(--line2);font:11px var(--mono);color:var(--mute);backdrop-filter:blur(4px)}
-.legend{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:6px 12px;padding:6px 10px;border-radius:8px;background:rgba(10,12,15,.78);border:1px solid var(--line2);font-size:11px;color:var(--mute);backdrop-filter:blur(4px)}
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;font-size:11px;color:var(--mute)}
 .sw{display:inline-block;width:10px;height:10px;margin-right:5px;border-radius:2px;vertical-align:-1px}
 .sw.route{background:#fff}.sw.blind{background:var(--bad)}.sw.view{background:rgba(76,201,216,.6)}
 .sw.s15{background:rgba(245,185,74,.8)}.sw.s20{background:rgba(239,91,91,.85)}
@@ -47,14 +47,14 @@ h2{margin:0;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:u
 .tl-tools{display:flex;align-items:center;gap:10px}
 #oPos{font:11px var(--mono);color:var(--mute)}
 canvas{display:block;width:100%}
-#strip{height:176px;background:#0b0e12;border-radius:8px}
+#strip{height:228px;background:#0b0e12;border-radius:8px}
 #pano{aspect-ratio:3.2/1;background:#0b0e12;border-radius:8px}
 .pill{background:var(--s2);color:var(--ink);border:1px solid var(--line2);border-radius:999px;padding:3px 12px;font:600 11px var(--sans);cursor:pointer}
 .pill:hover{border-color:var(--accent)}
 input[type=range]{width:100%;accent-color:var(--accent);margin:8px 0 0}
 
 /* side */
-.side{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px;padding-right:2px}
+.side{min-height:0;max-height:calc(100vh - 80px);overflow:auto;position:sticky;top:12px;align-self:start;display:flex;flex-direction:column;gap:12px;padding-right:2px}
 .side::-webkit-scrollbar{width:8px}.side::-webkit-scrollbar-thumb{background:var(--line2);border-radius:8px}
 details.card summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
 details.card summary::-webkit-details-marker{display:none}

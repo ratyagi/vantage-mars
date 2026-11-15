@@ -4,5 +4,5 @@
   "mad_m": 0.0,
   "p10_m": -0.0,
   "p90_m": 0.0,
-  "note": "Rover elevation and DEM may use different vertical references; the median offset is informational, the spread (MAD) hints at horizontal registration and local relief effects. Not a formal accuracy."
+  "note": "MMGIS waypoint elevations appear to be sampled from the same DEM family, so a near-zero difference confirms the lon/lat to pixel mapping, not independent accuracy. If the difference is large, suspect a georeferencing or vertical-datum problem."
 }
