@@ -9,6 +9,7 @@ Lets an AI assistant (Claude Desktop, Claude Code or any MCP client) call the Va
 | `terrain_info` | Terrain window, coordinates, default scene (habitat, rover, landmarks, Curiosity route), sources. |
 | `eva_check` | At a point (by `sol`, `route_m` or `x`/`y`): what is in view, slope, fastest walk home, start-back margin, sun, dust and radio, plus a list of HOLD and CAUTION issues. |
 | `radio_plan` | Radio line-of-sight coverage along the route, longest outage, best relay sites. |
+| `horizon_fix` | Where am I, from the skyline alone. With `sol`, uses the skyline from the real Curiosity Navcam frame at that stop (sol 4748: 5 m from the true position). |
 | `line_of_sight` | Can A see B, with clearance and where it is blocked. |
 | `plan_route` | Slope-limited route between two points that prefers keeping the habitat in view. |
 
@@ -32,6 +33,7 @@ Needs `web/data/dem.f32` (see the main README).
 
 - "Where was Curiosity on sol 4748, and could a walking astronaut there see the habitat?"
 - "During a dust storm with tau 4 and a 20 minute shelter limit, is sol 4748 safe to walk to?"
+- "Find Curiosity's position at sol 4748 from its photo's skyline alone. How far off is it?"
 - "Where should we park a radio relay for this route?"
 - "Plan a walk from the sol 4634 stop to the sol 4839 stop under 20 degrees of slope."
 

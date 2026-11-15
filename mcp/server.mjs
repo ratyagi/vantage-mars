@@ -10,7 +10,7 @@ import { sunPosition } from "../web/js/sun.js";
 import {
   lineOfSight, sampleRoute, routeVisibility, cumulativeWalkMinutes, suggestLandmarks, costField,
   radioCoverage, relaySites, planRoute, daylightLeftMin, sunTransmission, visualRangeM, inTerrainShadow,
-  hiddenGroundAhead, SLOPE_BASELINE_M,
+  hiddenGroundAhead, SLOPE_BASELINE_M, skylineAt, skylineMismatch,
 } from "../web/js/visibility.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -126,6 +126,31 @@ const TOOLS = {
         relays: rs.picks.map((q, i) => ({ rank: i + 1, x: r1(q.x, 0), y: r1(q.y, 0), distance_from_habitat_m: r1(q.dHab, 0), coverage_after: r1(q.coveredFrac, 2) })),
         caveat: "Geometric line of sight only, not a link budget (no diffraction, Fresnel clearance or antenna pattern).",
       };
+    },
+  },
+  horizon_fix: {
+    description: "Find where an observer is from the skyline alone (no GPS, no magnetic compass on Mars). Give either a sol (uses the skyline traced from the real Curiosity Navcam frame at that stop) or observations [{az, el}] in degrees with heading known. Searches 1.2 x 1.2 km around the habitat.",
+    inputSchema: { type: "object", properties: { sol: { type: "integer", enum: [4634, 4748, 4839] }, observations: { type: "array", items: { type: "object", properties: { az: { type: "number" }, el: { type: "number" } } } }, eye_m: { type: "number" } } },
+    run: (a) => {
+      let obs = a.observations, eye = a.eye_m ?? 1.7, truth = null;
+      if (a.sol !== undefined) {
+        const V = JSON.parse(fs.readFileSync(path.join(dataDir, "validation", "results.json"), "utf8"));
+        const st = V.stops.find((q) => q.sol === a.sol); if (!st) throw new Error("Real photos exist for sols 4634, 4748, 4839.");
+        const bins = new Map(); for (const q of st.columns) { const k = Math.round(q.az / 2) * 2; if (!bins.has(k)) bins.set(k, []); bins.get(k).push(q.real_el); }
+        obs = [...bins].map(([az, v]) => ({ az: (az + 360) % 360, el: v.reduce((t, q) => t + q, 0) / v.length })); eye = 2.0;
+        truth = { x: st.rover_position.x_m, y: st.rover_position.y_m };
+      }
+      if (!obs || obs.length < 5) throw new Error("Need at least 5 skyline observations, or a sol.");
+      const g = 20, R = 600, cand = [];
+      for (let y = habitat.y - R; y <= habitat.y + R; y += g) for (let x = habitat.x - R; x <= habitat.x + R; x += g) if (T.inside(x, y)) cand.push({ x, y, e: skylineMismatch(T, x, y, eye, obs) });
+      cand.sort((p, q) => p.e - q.e);
+      const seeds = []; for (const c of cand) { if (seeds.every((s) => Math.hypot(s.x - c.x, s.y - c.y) > 40)) seeds.push(c); if (seeds.length === 5) break; }
+      let best = { ...seeds[0] };
+      for (const sd of seeds) for (let y = sd.y - 16; y <= sd.y + 16; y += 4) for (let x = sd.x - 16; x <= sd.x + 16; x += 4) { const e = skylineMismatch(T, x, y, eye, obs); if (e < best.e) best = { x, y, e }; }
+      const alt = cand.find((c) => Math.hypot(c.x - best.x, c.y - best.y) > 100)?.e ?? Infinity;
+      return { fix: { x: r1(best.x, 0), y: r1(best.y, 0) }, skyline_fit_deg: r1(best.e, 2), best_fit_elsewhere_deg: r1(alt, 2), unambiguous: alt > best.e * 1.5,
+        error_vs_true_m: truth ? r1(Math.hypot(best.x - truth.x, best.y - truth.y), 0) : null,
+        caveat: "Heading assumed known (sun sighting). Fails when the skyline is beyond the 2.5 km terrain window or covers too few directions. Advisory." };
     },
   },
   line_of_sight: {

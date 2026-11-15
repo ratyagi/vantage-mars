@@ -20,6 +20,7 @@ Stated plainly so results are read correctly.
 - **Planner scope.** The route planner uses the same assumed pace and slope limit, a 5 m grid, and treats the habitat as the only visibility goal. It does not model boulders, soil strength, energy use or consumables, and it does not choose science stops.
 - **Shelter reach and clocks** use the same assumed pace as everything else, assume the astronaut walks continuously from the route start, and ignore carrying, rest, suit mobility and any radiation dose. Contours stop at 800 m from the habitat.
 - **Dust mode** uses a single optical depth with a uniform scale height. It does not model near-surface dust layers, lifted dust devils, or suit lights. The haze in the predicted view is a depth cue, not a radiative transfer result.
+- **Horizon fix** assumes the heading is known, needs the skyline to lie inside the 2.5 km terrain window, and needs a wide enough view. In hollows next to ridges the skyline changes faster than the 20 m search grid, so the fix can miss; the ambiguity check catches the cases we tested but is a heuristic. One real-photo success out of three is a small sample.
 - **Verdict confidence** only perturbs position, not the DEM itself or the thresholds.
 - **Radio shadow** is geometric line of sight only. It ignores diffraction, ground reflection, Fresnel clearance, antenna pattern and any relay hardware. Relay sites are a siting aid, not a link design.
 - **Solar particle event check** is a walk-back time against a user-set limit. It is not a radiation model and uses no measured Mars dose rates.

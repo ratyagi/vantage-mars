@@ -86,6 +86,15 @@ Walking time uses a deliberately simple model: level speed 2 km/h, derated linea
 - Verdict confidence: the location-dependent HOLD checks (slope over 20 degrees, nothing in view) are rerun at 8 points on a circle with radius equal to the assumed position error (default 5 m). "Robust" means all 8 agree with the current point.
 - MCP server (`mcp/server.mjs`): the same functions as the app, loaded in Node on the same terrain and default scene, exposed as tools over the Model Context Protocol (JSON-RPC over stdio). No network access, no dependencies.
 
+## 10d. Horizon fix (position from the skyline)
+
+- Observation: a list of (azimuth, elevation) skyline samples. Real case: the skyline traced from a Curiosity Navcam frame (validation data), binned to 2 degrees, eye height 2.0 m. Simulated case: a full 360 degree turn at 4 degree steps from the walker's position with 0.5 degree Gaussian noise.
+- Heading is assumed known (sun sighting or camera attitude). Mars has no global magnetic field.
+- Search: predicted skyline (`skylineAt`, same geometry as `skyline()`) at every cell of a 20 m grid over a 1.2 x 1.2 km box around the habitat; score = RMS difference in degrees (`skylineMismatch`). The 5 best distinct cells are refined on a 4 m grid within 16 m.
+- Ambiguity: the fix is called unambiguous when the best fit more than 100 m away is at least 1.5 times worse. This is a heuristic threshold.
+- Result on real photos: sol 4748 within 5 m (2 m in the MCP run, which uses a slightly different grid origin); sols 4634 and 4839 fail (far horizon outside the window; about 30 degrees of skyline only).
+- Related NASA work: horizon-based navigation for the Moon at NASA Goddard (Yew; Driessen et al. 2024).
+
 ## 11. Terrain shadow
 
 For a point, a ray is marched toward the Sun (azimuth and elevation from section 8) up to 2 km. If the terrain along the ray rises above the Sun's elevation angle, with curvature correction, the point is in terrain shadow. Sun below the horizon counts as shadow. Rays that leave the terrain window are treated as lit, which is a simplification. Object shadows below the DEM cell size are not modeled.

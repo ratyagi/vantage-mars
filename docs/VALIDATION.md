@@ -74,6 +74,16 @@ Eye height from 1.5 to 2.5 m changes RMSE by at most 0.3 deg at any stop.
 - **Landmarks (H2) were not tested as written.** We used skyline peaks as a proxy. At stop 2 the main predicted peak (az 55.8, el 5.22) matches the image peak (az 55.5, el 5.21). At stop 1 the single azimuth match pairs a near ridge at -3.3 deg with a far peak at +1.8 deg, so it is not a real landmark match. Peak counts are too small for the precision and recall values to mean much.
 - **Position error up to 25 m roughly doubles the error at stop 2** (0.43 to 0.81 deg mean, 1.09 deg worst) and has a smaller effect at stop 3, where the skyline is farther away. At stop 1 the missing far terrain dominates.
 
+## Follow-on: position from the real skyline (horizon fix)
+
+Using the same traced skylines, the app searched a 1.2 x 1.2 km box for the position whose predicted skyline best matches each real frame, with no knowledge of the rover position.
+
+| Stop | Result | Why |
+|---|---|---|
+| Sol 4748 | Within 5 m, unambiguous | Skyline is nearby foothills inside the window, 57 deg of azimuth |
+| Sol 4634 | Fails | Real horizon is the far crater rim, outside the 2.5 km window |
+| Sol 4839 | Fails | Only about 30 deg of skyline in the usable frame |
+
 ## Data and links
 
 All images are credited NASA/JPL-Caltech. Image crops are not included in the repo. Links to each image are in `web/data/validation/results.json`.

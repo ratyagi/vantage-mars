@@ -470,3 +470,28 @@ export function sunTransmission(tau, elevDeg) { return elevDeg <= 0 ? 0 : Math.e
 // Horizontal visual range for a dark target at 2% contrast threshold, with dust spread over an assumed scale height.
 // V = ln(50) / beta, beta = tau / H. Assumption: uniform mixing over H (default 11 km); near-surface dust can be denser.
 export function visualRangeM(tau, H = 11000) { return tau > 0 ? Math.log(50) * H / tau : Infinity; }
+
+// ---------- horizon fix: where am I, from the skyline alone ----------
+// Skyline elevation (deg) at the given azimuths. Same geometry as skyline(), with coarser steps far out for speed.
+export function skylineAt(T, x, y, eyeH, azs, maxRange = 2500) {
+  const z0 = T.heightAt(x, y) + eyeH;
+  if (!isFinite(z0)) return null;
+  return azs.map((a) => {
+    const ux = Math.sin(a * RAD), uy = -Math.cos(a * RAD);
+    let best = -90;
+    for (let d = 2; d <= maxRange; d += d < 100 ? 2 : d < 400 ? 4 : 8) {
+      const z = T.heightAt(x + ux * d, y + uy * d);
+      if (!isFinite(z)) break;
+      const e = Math.atan2(z - z0 - curvDrop(d), d) / RAD;
+      if (e > best) best = e;
+    }
+    return best;
+  });
+}
+// RMS difference (deg) between an observed skyline [{az, el}] and the prediction at (x, y). Heading is assumed known (sun or star sighting).
+export function skylineMismatch(T, x, y, eyeH, obs) {
+  const p = skylineAt(T, x, y, eyeH, obs.map((o) => o.az));
+  if (!p) return Infinity;
+  let e = 0; for (let i = 0; i < p.length; i++) e += (p[i] - obs[i].el) ** 2;
+  return Math.sqrt(e / p.length);
+}

@@ -52,6 +52,7 @@
     <button id="btnAuto" title="Suggest high points as landmarks"><svg viewBox="0 0 24 24"><path d="M3 19 L9 8 L13 14 L16 10 L21 19 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Auto</span></button>
     <button id="btnTraverse" class="hidden" title="Load the Curiosity traverse inside this window"><svg viewBox="0 0 24 24"><path d="M3 17 C8 17 7 8 12 8 S16 16 21 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Traverse</span></button>
     <button id="btnPlan" title="Plan a slope-limited route that keeps the habitat in view (needs a habitat and 2+ route points)"><svg viewBox="0 0 24 24"><path d="M4 18 C8 18 8 6 12 6 S16 18 20 18" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3" stroke-linecap="round"/></svg><span>Plan</span></button>
+    <button id="btnLocate" title="Lost? Find your position from the horizon alone"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2 V6 M12 18 V22 M2 12 H6 M18 12 H22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg><span>Locate</span></button>
     <button id="btnZoom" title="Toggle zoom to route or full window"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15 L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span id="zoomLbl">Zoom</span></button>
     <button id="btnClear" title="Clear everything"><svg viewBox="0 0 24 24"><path d="M6 6 L18 18 M18 6 L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Clear</span></button>
   </nav>
@@ -66,6 +67,7 @@
     <div class="mapwrap" id="mapwrap">
       <canvas id="map"></canvas>
       <div class="hover" id="hoverReadout">hover the map</div>
+      <div class="locbox hidden" id="locBox"></div>
       <div class="legend">
         <span><i class="sw route"></i>Route</span>
         <span><i class="sw blind"></i>Blind stretch</span>

@@ -2,7 +2,7 @@ import { Terrain, makeSyntheticTerrain, hillshade } from "./terrain.js";
 import { sunPosition } from "./sun.js";
 import {
   sampleRoute, routeVisibility, blindRuns, skyline, hiddenGroundAhead,
-  viewshed, renderPanorama, costField, daylightLeftMin, radioCoverage, relaySites, sunTransmission, visualRangeM, lineOfSight, walkMinutes, cumulativeWalkMinutes, inTerrainShadow, visibilityFraction, planRoute, azimuthDeg, suggestLandmarks, SLOPE_BASELINE_M,
+  viewshed, renderPanorama, costField, daylightLeftMin, radioCoverage, relaySites, skylineAt, skylineMismatch, sunTransmission, visualRangeM, lineOfSight, walkMinutes, cumulativeWalkMinutes, inTerrainShadow, visibilityFraction, planRoute, azimuthDeg, suggestLandmarks, SLOPE_BASELINE_M,
 } from "./visibility.js";
 
 const $ = (id) => document.getElementById(id);
@@ -59,9 +59,11 @@ async function loadValidation() {
       <p class="note"><b>Fails:</b> when the real skyline lies beyond the window (looking north across the crater floor at sol 4634) the model horizon is 3 to 6&deg; too low. That case is measured at one stop only. Treat far horizons as unvalidated.</p>
       <p class="note">Moving the observer 25 m raises error at sol 4748 from 0.43&deg; to 0.81&deg;.</p>
       <div class="vbtns"><span class="note">Show the real camera skyline over the predicted view:</span>${d.stops.map((x, i) => `<button class="pill" data-stop="${i}">Sol ${x.sol}</button>`).join("")}<button class="pill" data-stop="-1">Clear</button></div>
+      <div class="vbtns"><span class="note">Find where Curiosity stood from the photo\u2019s skyline alone:</span>${d.stops.map((x, i) => `<button class="pill" data-loc="${i}">Sol ${x.sol}</button>`).join("")}</div>
       <img class="vimg" src="data/validation/skyline_comparison.png" alt="Predicted vs real skyline at three Curiosity stops" loading="lazy">
       <p class="note">Images: NASA/JPL-Caltech. <a href="https://github.com/" id="valLink" target="_blank" rel="noopener">Method and links</a> are in docs/VALIDATION.md.</p>`;
     box.querySelectorAll("button[data-stop]").forEach((b) => { b.onclick = () => showRealCamera(+b.dataset.stop); });
+    box.querySelectorAll("button[data-loc]").forEach((b) => { b.onclick = () => { locateFromPhoto(+b.dataset.loc); window.scrollTo({ top: 0, behavior: "smooth" }); }; });
     const a = $("valLink"); if (a) { a.href = "https://github.com/" + (location.hostname.split(".")[0] || "") + "/vantage-mars/blob/main/docs/VALIDATION.md"; }
   } catch (_) {
     chip.textContent = "Validation: results unavailable"; chip.className = "chip warn";
@@ -142,6 +144,80 @@ function drawRadioRoute() {
   (S.relay?.picks || []).forEach((r, i) => marker(r, "R" + (i + 1), "#b9a8ff"));
 }
 
+
+// ---------- horizon fix ("Locate"): find the walker from the skyline alone ----------
+// Search a 1.2 km box around the habitat on a 20 m grid, then refine to 4 m around the best cell. Animated in chunks.
+let locJob = 0;
+function gaussRand() { return Math.sqrt(-2 * Math.log(Math.random() + 1e-12)) * Math.cos(2 * Math.PI * Math.random()); }
+function locateFromHere() {
+  const c = currentSample(); if (!c) return;
+  const azs = []; for (let a = 0; a < 360; a += 4) azs.push(a);
+  const sk = skylineAt(S.T, c.x, c.y, +$("eyeH").value, azs);
+  const obs = azs.map((a, i) => ({ az: a, el: sk[i] + gaussRand() * 0.5 }));
+  runLocate({ obs, eyeH: +$("eyeH").value, truth: { x: c.x, y: c.y }, label: `horizon from one slow turn on the spot (simulated helmet camera, 0.5\u00b0 measurement noise)`, sim: true });
+}
+function locateFromPhoto(i) {
+  const st = S.valid?.stops?.[i]; if (!st) return;
+  const bins = new Map(); for (const q of st.columns) { const k = Math.round(q.az / 2) * 2; if (!bins.has(k)) bins.set(k, []); bins.get(k).push(q.real_el); }
+  const obs = [...bins].map(([a, v]) => ({ az: (a + 360) % 360, el: v.reduce((t, q) => t + q, 0) / v.length }));
+  runLocate({ obs, eyeH: 2.0, truth: { x: st.rover_position.x_m, y: st.rover_position.y_m }, label: `skyline traced from a real Curiosity Navcam frame, sol ${st.sol} (${obs.length} directions)`, sol: st.sol });
+}
+function runLocate(job) {
+  const id = ++locJob, T = S.T, ctr = S.habitat || job.truth, R = 600, g = 20;
+  const x0 = Math.max(T.cell * 2, ctr.x - R), y0 = Math.max(T.cell * 2, ctr.y - R);
+  const gw = Math.floor((Math.min(T.extentX - 2, ctr.x + R) - x0) / g), gh = Math.floor((Math.min(T.extentY - 2, ctr.y + R) - y0) / g);
+  const err = new Float32Array(gw * gh).fill(NaN);
+  S.loc = { ...job, x0, y0, g, gw, gh, err, done: false, best: null };
+  $("showReach").checked = false;
+  const box = $("locBox"); box.classList.remove("hidden");
+  box.innerHTML = `<div class="lh">HORIZON FIX <button id="locClose">Close</button></div>Matching the ${job.label} against ${gw * gh} candidate positions...<div class="locbar"><i id="locBar"></i></div>`;
+  $("locClose").onclick = closeLocate;
+  let k = 0;
+  const step = () => {
+    if (id !== locJob) return;
+    const end = Math.min(gw * gh, k + 220);
+    for (; k < end; k++) { const i = k % gw, j = (k / gw) | 0; err[k] = skylineMismatch(T, x0 + (i + 0.5) * g, y0 + (j + 0.5) * g, job.eyeH, job.obs); }
+    $("locBar").style.width = (100 * k / (gw * gh)).toFixed(0) + "%";
+    S.locImg = null; drawMap();
+    if (k < gw * gh) return setTimeout(step, 0);
+    // best cell, refine, and the best fit somewhere else (more than 100 m away) to judge ambiguity
+    const order = [...err.keys()].filter((q) => isFinite(err[q])).sort((p1, p2) => err[p1] - err[p2]);
+    const seeds = []; for (const q of order) { const x = x0 + ((q % gw) + 0.5) * g, y = y0 + (((q / gw) | 0) + 0.5) * g; if (seeds.every((t) => Math.hypot(t.x - x, t.y - y) > 40)) seeds.push({ x, y }); if (seeds.length === 5) break; }
+    let best = { x: seeds[0].x, y: seeds[0].y, e: Infinity };
+    for (const sd of seeds) for (let y = sd.y - 16; y <= sd.y + 16; y += 4) for (let x = sd.x - 16; x <= sd.x + 16; x += 4) { const e = skylineMismatch(T, x, y, job.eyeH, job.obs); if (e < best.e) best = { x, y, e }; }
+    let alt = Infinity; for (let q = 0; q < err.length; q++) { const x = x0 + ((q % gw) + 0.5) * g, y = y0 + (((q / gw) | 0) + 0.5) * g; if (Math.hypot(x - best.x, y - best.y) > 100 && err[q] < alt) alt = err[q]; }
+    S.loc.best = best; S.loc.alt = alt; S.loc.done = true; drawMap();
+    const miss = Math.hypot(best.x - job.truth.x, best.y - job.truth.y), conf = alt > best.e * 1.5;
+    box.innerHTML = `<div class="lh">HORIZON FIX <button id="locClose">Close</button></div>From the ${job.label} alone, Vantage places the walker here: <b>${miss.toFixed(0)} m from the true position</b> (searched ${(2 * R / 1000).toFixed(1)} \u00d7 ${(2 * R / 1000).toFixed(1)} km). Skyline fit ${best.e.toFixed(2)}\u00b0, best fit elsewhere ${alt.toFixed(2)}\u00b0: <b>${conf ? "unambiguous" : "ambiguous, do not trust this fix"}</b>.` +
+      (job.sol === 4634 ? " The real horizon here is the far crater rim, outside the 2.5 km terrain window, so this fix is expected to fail." : job.sol === 4839 ? " This frame shows only about 30\u00b0 of skyline, too little to pin down a position." : "") +
+      ` <span style="color:var(--dim)">Heading assumed known from a sun sighting. Terrain-model match, advisory.</span>`;
+    $("locClose").onclick = closeLocate;
+  };
+  step();
+}
+function closeLocate() { locJob++; S.loc = null; S.locImg = null; $("locBox").classList.add("hidden"); drawMap(); }
+function drawLoc() {
+  const L = S.loc; if (!L) return;
+  if (!S.locImg) {
+    const cv = document.createElement("canvas"); cv.width = L.gw; cv.height = L.gh;
+    const cx = cv.getContext("2d"), id = cx.createImageData(L.gw, L.gh), D = id.data;
+    for (let k = 0; k < L.err.length; k++) { const e = L.err[k]; if (!isFinite(e)) continue; const q = Math.max(0, 1 - e / 2); const o = k * 4; D[o] = 20 + 80 * q; D[o + 1] = 60 + 190 * q; D[o + 2] = 90 + 160 * q; D[o + 3] = 70 + 185 * q * q; }
+    cx.putImageData(id, 0, 0); S.locImg = cv;
+  }
+  const [ax, ay] = toPx(L.x0, L.y0), [bx, by] = toPx(L.x0 + L.gw * L.g, L.y0 + L.gh * L.g);
+  mctx.imageSmoothingEnabled = false; mctx.drawImage(S.locImg, ax, ay, bx - ax, by - ay); mctx.imageSmoothingEnabled = true;
+  const d = view.dpr || 1;
+  if (L.done && L.best) {
+    const [tx, ty] = toPx(L.truth.x, L.truth.y), [fx, fy] = toPx(L.best.x, L.best.y);
+    mctx.strokeStyle = "#fff"; mctx.lineWidth = 1.5 * d; mctx.setLineDash([4 * d, 4 * d]); mctx.beginPath(); mctx.moveTo(tx, ty); mctx.lineTo(fx, fy); mctx.stroke(); mctx.setLineDash([]);
+    mctx.lineWidth = 2.5 * d; mctx.beginPath(); mctx.moveTo(tx - 6 * d, ty - 6 * d); mctx.lineTo(tx + 6 * d, ty + 6 * d); mctx.moveTo(tx + 6 * d, ty - 6 * d); mctx.lineTo(tx - 6 * d, ty + 6 * d); mctx.stroke();
+    mctx.strokeStyle = "#4cc9d8"; mctx.lineWidth = 3 * d; mctx.beginPath(); mctx.arc(fx, fy, 11 * d, 0, 7); mctx.stroke();
+    mctx.fillStyle = "#4cc9d8"; mctx.beginPath(); mctx.arc(fx, fy, 3.5 * d, 0, 7); mctx.fill();
+    mctx.font = `700 ${11 * d}px sans-serif`; mctx.textAlign = "left"; mctx.shadowColor = "#000"; mctx.shadowBlur = 4 * d;
+    mctx.fillText("FIX", fx + 14 * d, fy + 4 * d); mctx.fillStyle = "#fff"; mctx.fillText("TRUE", tx + 10 * d, ty - 8 * d); mctx.shadowBlur = 0;
+  }
+}
+
 // ---------- map ----------
 const map = $("map"), mctx = map.getContext("2d");
 let view = { px: 1, W: 0, H: 0 };
@@ -205,6 +281,7 @@ function drawMap() {
     mctx.stroke(); mctx.restore();
   }
   if ($("showRadio").checked) drawRadioRoute();
+  drawLoc();
   // route with blind runs
   if (S.rows.length > 1) {
     mctx.lineWidth = 3 * (view.dpr || 1); mctx.lineJoin = "round"; mctx.strokeStyle = "#fff"; mctx.beginPath();
@@ -611,6 +688,7 @@ function bind() {
     S.mode = b.dataset.mode;
     document.querySelectorAll(".mode").forEach((x) => x.classList.toggle("active", x === b));
   }));
+  $("btnLocate").onclick = locateFromHere;
   $("btnClear").onclick = () => { S.route = []; S.landmarks = []; S.habitat = null; S.rover = null; S.view = null; setupMap(); recompute(); };
   $("btnPlan").onclick = () => {
     if (S.route.length < 2) return;
@@ -750,6 +828,8 @@ function heroStop() { clearInterval(heroTimer); heroTimer = null; $("pos").value
 const TOUR = [
   { t: "Real Curiosity boxwork route on 1 m NASA terrain. The verdict, predicted view and timeline update at every step.", go: () => setPos(0) },
   { t: () => { const c = currentSample(); if (!c) return ""; const vis = targets().filter((t) => c.vis[t.id]?.visible === true).map((t) => t.name); const hid = targets().filter((t) => c.vis[t.id]?.visible === false).map((t) => t.name); return S.runs.length || !vis.length ? "Nothing to navigate by here: habitat, rover, partner and every landmark are out of sight. The badge on the verdict shows that a 5 m position error decides it, which is the point: in terrain like this you cannot count on the view." : `Out of sight of home: ${hid.join(", ")} ${hid.length > 1 ? "are" : "is"} hidden here. Only ${vis.join(" and ") || "nothing"} keeps the walker oriented. The strip below shows how often this happens along the route.`; }, go: () => { const tot = S.rows.length ? S.rows[S.rows.length - 1].s : 1; const r = S.runs[0]; if (r) { setPos(((r.from + r.length / 2) / tot) * 1000); return; } let bi = 0, bn = 99; S.rows.forEach((row, i) => { if (row.vis.hab?.visible !== false) return; const n = targets().filter((t) => row.vis[t.id]?.visible === true).length; if (n < bn) { bn = n; bi = i; } }); setPos((bi / Math.max(1, S.rows.length - 1)) * 1000); } },
+  { t: () => S.loc && S.loc.done ? `Lost, with no GPS and no magnetic compass on Mars. The walker turns once on the spot, and Vantage matches that horizon against 3,600 places: the fix lands ${Math.hypot(S.loc.best.x - S.loc.truth.x, S.loc.best.y - S.loc.truth.y).toFixed(0)} m from the true position. Deep in a hollow the fix gets ambiguous, and the app says so. Next: the same search on a real Curiosity photo.` : "Lost, with no GPS and no magnetic compass on Mars. The walker turns once on the spot, and Vantage matches that horizon against 3,600 places...", go: () => { setPos(150); locateFromHere(); const iv = setInterval(() => { if (S.loc?.done) { clearInterval(iv); const tt = TOUR[tourI].t; $("tText").textContent = typeof tt === "function" ? tt() : tt; } }, 300); } },
+  { t: () => S.loc && S.loc.done ? `Real photo: from the skyline in Curiosity\u2019s Navcam frame at sol 4748, Vantage puts the rover ${Math.hypot(S.loc.best.x - S.loc.truth.x, S.loc.best.y - S.loc.truth.y).toFixed(0)} m from where it actually stood. It fails at the other two stops, for reasons shown in the validation panel.` : "Real photo: matching the skyline from Curiosity\u2019s Navcam frame at sol 4748 against the terrain...", go: () => { locateFromPhoto(1); const iv = setInterval(() => { if (S.loc?.done) { clearInterval(iv); const tt = TOUR[tourI].t; $("tText").textContent = typeof tt === "function" ? tt() : tt; } }, 300); } },
   { t: "Walker view: the full-screen predicted view from the walker's eye height, with the verdict underneath. Arrow keys walk the route.", go: () => { walkerOpen(); } },
   { t: "Same spot, low sun (about 06:30 local time). Slopes and shadows flatten out and the flags warn about it.", go: () => { $("ltst").value = 6.5; drawHillshade(); recompute(); } },
   { t: () => `Solar particle event alert with a 20 minute shelter limit. The contours show the fastest way home, bending around steep ground. From here it takes ${(returnMin(currentSample()) || 0).toFixed(0)} min, over the limit, so the verdict is HOLD. Retracing the drawn route would take ${(S.cum[S.rows.indexOf(currentSample())] || 0).toFixed(0)} min.`, go: () => { $("sepAlert").checked = true; $("shelterMin").value = 20; setPos(950); } },
@@ -767,7 +847,7 @@ function tourShow(i) {
   $("tStep").textContent = `${tourI + 1} / ${TOUR.length}`;
   $("tNext").textContent = tourI === TOUR.length - 1 ? "Finish" : "Next";
   walkerClose();
-  $("ltst").value = TOURSTATE.ltst; $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false; $("lookMode").value = "travel"; S.real = null; $("tau").value = 0.6;
+  $("ltst").value = TOURSTATE.ltst; $("sepAlert").checked = false; $("shelterMin").value = 60; $("showRadio").checked = false; $("lookMode").value = "travel"; S.real = null; $("tau").value = 0.6; if (S.loc) closeLocate();
   drawHillshade();
   TOUR[tourI].go();
   const tt = TOUR[tourI].t; $("tText").textContent = typeof tt === "function" ? tt() : tt;

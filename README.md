@@ -19,7 +19,7 @@ Predicts the view along a Mars EVA route on 1 m NASA terrain, flags where home d
 ![NASA Space Apps 2026](https://img.shields.io/badge/NASA%20Space%20Apps-2026-0b3d91?style=flat-square)
 ![Site](https://img.shields.io/badge/site-Gale%20Crater%20boxwork-e0774a?style=flat-square)
 ![Terrain](https://img.shields.io/badge/terrain-USGS%201%20m%20DEM-5b6b7a?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-27%20passing-2e9e78?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-28%20passing-2e9e78?style=flat-square)
 ![Build](https://img.shields.io/badge/build%20step-none-2e9e78?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey?style=flat-square)
 
@@ -45,11 +45,29 @@ Traverse planning already weighs slope, distance and time, and Artemis planning 
 <tr>
 <td width="33%" align="center"><h3>77%</h3>of the route has no radio line of sight to the habitat. One relay at the marked site would cover all of it.</td>
 <td width="33%" align="center"><h3>29 min vs 113 min</h3>fastest way home from the far end of the route, against retracing the drawn route.</td>
-<td width="33%" align="center"><h3>0.4 to 0.6&deg;</h3>skyline error against real Curiosity camera frames where the horizon is inside the terrain window.</td>
+<td width="33%" align="center"><h3>5 m</h3>from where Curiosity actually stood, found from the skyline of one real Navcam photo alone, searching 1.2 &times; 1.2 km.</td>
 </tr>
 </table>
 
 Numbers are computed live from the loaded route and terrain. They are predictions with labeled assumptions, not measurements.
+
+<br>
+
+## Lost without GPS? Read the horizon.
+
+<table><tr>
+<td width="42%"><img src="docs/img/horizon-fix-map.png" alt="Horizon fix on the real Curiosity photo at sol 4748" width="100%"></td>
+<td valign="top">
+
+Mars has no GPS and no global magnetic field, so a compass does not work. Vantage finds a walker from the shape of the horizon alone: it matches the skyline they see against the predicted skyline at 3,600 candidate positions, then refines the best few to 4 m.
+
+- **Real photo, sol 4748:** from the skyline traced in Curiosity's Navcam frame, the fix lands **within 5 m** of where the rover stood, and the app rates it unambiguous.
+- **Real photos, sols 4634 and 4839:** the fix fails. One horizon is the far crater rim, outside the terrain window; the other frame shows only about 30&deg; of sky. Both are reported, not hidden.
+- **Simulated full turn on the spot** (0.5&deg; noise): a few metres at typical points. Deep in hollows next to ridges the fix becomes ambiguous and the app says so, so the guidance is the same as on Earth: climb to a rise first.
+
+NASA Goddard is developing the same idea, horizon-based navigation, as a backup for Artemis astronauts on the Moon ([NASA Goddard, 2022](https://phys.org/news/2022-12-nasa-ai-lunar-surface-landmarks.html); [Driessen et al., 2024](https://ntrs.nasa.gov/api/citations/20240011910/downloads/Lunar_Horizon_Navigation_SIW_Paper.pdf)). Vantage applies it to Mars and tests it on a real rover photo.
+
+</td></tr></table>
 
 <br>
 
@@ -167,7 +185,7 @@ python pipeline/fetch_terrain_window.py
 cd web && python -m http.server 8000     # open http://localhost:8000
 
 # 3. Tests
-node --test tests/core.test.mjs          # visibility, planner, shelter reach, radio (27 tests)
+node --test tests/core.test.mjs          # visibility, planner, shelter reach, radio (28 tests)
 python tests/test_pipeline.py            # data pipeline on a synthetic GeoTIFF
 node validation/validate.mjs             # rerun the skyline validation
 ```

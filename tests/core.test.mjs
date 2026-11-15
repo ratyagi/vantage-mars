@@ -9,7 +9,7 @@ import {
   lineOfSight, sampleRoute, routeVisibility, blindRuns, skyline,
   hiddenGroundAhead, renderPanorama, curvDrop, azimuthDeg, walkMinutes, suggestLandmarks,
   cumulativeWalkMinutes, inTerrainShadow, shadowMap, visibilityFraction, planRoute,
-  costField, daylightLeftMin, radioCoverage, relaySites,
+  costField, daylightLeftMin, radioCoverage, relaySites, skylineAt, skylineMismatch,
 } from "../web/js/visibility.js";
 
 function flat(w = 400, h = 400, cell = 1, z = 0) {
@@ -289,4 +289,14 @@ test("MCP server answers initialize, tools/list and an eva_check call", { skip: 
   assert.equal(msgs[0].result.serverInfo.name, "vantage-mars");
   assert.ok(msgs[1].result.tools.some((t) => t.name === "eva_check"));
   assert.ok(isFinite(msgs[2].result.structuredContent.fastest_return_min));
+});
+
+test("horizon fix: the skyline seen from a point matches that point better than points 60 m away", () => {
+  const T = makeSyntheticTerrain(600, 600, 2);
+  const azs = []; for (let a = 0; a < 360; a += 6) azs.push(a);
+  const sk = skylineAt(T, 600, 600, 1.7, azs);
+  const obs = azs.map((az, i) => ({ az, el: sk[i] }));
+  const here = skylineMismatch(T, 600, 600, 1.7, obs);
+  assert.ok(here < 0.01);
+  for (const [dx, dy] of [[60, 0], [0, 60], [-60, 0], [0, -60]]) assert.ok(skylineMismatch(T, 600 + dx, 600 + dy, 1.7, obs) > here + 0.1);
 });
