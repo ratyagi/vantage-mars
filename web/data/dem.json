@@ -1,0 +1,26 @@
+{
+  "width": 2500,
+  "height": 2500,
+  "cell_m": 1.0,
+  "dtype": "float32-le",
+  "nodata": "NaN",
+  "row_order": "north_first",
+  "units": "meters",
+  "min": -3897.828369140625,
+  "max": -3330.355224609375,
+  "valid_fraction": 1.0,
+  "window_center_lonlat": [
+    137.38319504930556,
+    -4.809454245138889
+  ],
+  "native_col_off": 14104,
+  "native_row_off": 39048,
+  "step": 1,
+  "source_dem": "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/Mars/MSL/MSL_Gale_DEM_Mosaic_1m_v3.tif",
+  "source_waypoints": "https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json",
+  "retrieved_utc": "2026-11-15T21:21:19+00:00",
+  "radius_m": 3396190.0,
+  "product": "MSL_Gale_DEM_Mosaic_1m_v3 (Calef and Parker, USGS Astrogeology, PDS Annex)",
+  "stated_control": "HRSC controlled to MOLA: about 100 m horizontal and about 1 m vertical per USGS metadata; HiRISE parts tied to CTX/HRSC. Local relative accuracy is better.",
+  "synthetic": false
+}
