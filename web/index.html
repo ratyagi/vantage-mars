@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sightline: what will I see from here? (Mars EVA, Gale boxwork)</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <div>
+    <h1>Sightline</h1>
+    <p class="sub">What will a walking astronaut see from here, and what will they lose sight of? Gale Crater boxwork region.</p>
+  </div>
+  <div id="dataBadge" class="badge">loading terrain...</div>
+</header>
+
+<div id="banner" class="banner hidden"></div>
+
+<main>
+  <section class="pane" id="mapPane">
+    <div class="toolbar">
+      <button data-mode="route" class="mode active">Draw route</button>
+      <button data-mode="landmark" class="mode">Place landmark</button>
+      <button data-mode="habitat" class="mode">Place habitat</button>
+      <button data-mode="rover" class="mode">Place rover</button>
+      <button id="btnAuto">Suggest landmarks</button>
+      <button id="btnTraverse" class="hidden">Use Curiosity traverse</button>
+      <button id="btnClear">Clear all</button>
+    </div>
+    <canvas id="map"></canvas>
+    <div class="legend">
+      <span><i class="sw route"></i>route</span>
+      <span><i class="sw blind"></i>blind stretch</span>
+      <span><i class="sw view"></i>visible from marker</span>
+      <span><i class="sw s15"></i>slope over 15 deg</span>
+      <span><i class="sw s20"></i>over 20 deg</span>
+    </div>
+  </section>
+
+  <section class="pane" id="rightPane">
+    <div class="card">
+      <h2>Predicted view <span class="tag" id="panoTag"></span></h2>
+      <canvas id="pano"></canvas>
+      <p class="note" id="panoNote"></p>
+    </div>
+    <div class="card">
+      <h2>Visibility along the route</h2>
+      <canvas id="strip"></canvas>
+    </div>
+    <div class="card cuff" id="cuff">
+      <h2>Cuff card (next 120 m)</h2>
+      <div id="cuffBody">Draw a route (at least 2 points).</div>
+    </div>
+  </section>
+
+  <section class="pane controls">
+    <h2>Controls</h2>
+    <label>Position along route <output id="oPos"></output><input type="range" id="pos" min="0" max="1000" value="0"></label>
+    <label>Local true solar time (h) <output id="oLtst"></output><input type="range" id="ltst" min="6" max="18" step="0.25" value="9"></label>
+    <label>Solar longitude Ls (deg) <output id="oLs"></output><input type="range" id="ls" min="0" max="360" step="1" value="90"></label>
+    <label>Look direction
+      <select id="lookMode"><option value="travel">travel direction</option><option value="manual">manual</option></select>
+    </label>
+    <label>Manual azimuth (deg) <output id="oAz"></output><input type="range" id="lookAz" min="0" max="359" value="90"></label>
+    <label>Field of view (deg) <output id="oFov"></output><input type="range" id="fov" min="60" max="180" value="120"></label>
+    <div class="row2">
+      <label>Eye height (m)<input type="number" id="eyeH" value="1.7" step="0.1" min="1" max="2.2"></label>
+      <label>Partner gap (m)<input type="number" id="partnerGap" value="30" step="5" min="0" max="200"></label>
+      <label>Landmark height (m)<input type="number" id="landH" value="2" step="0.5" min="0" max="20"></label>
+      <label>Habitat height (m)<input type="number" id="habH" value="3" step="0.5" min="0" max="20"></label>
+      <label>Low-sun flag below (deg)<input type="number" id="thrSun" value="20" step="1" min="0" max="60"></label>
+      <label>Blind stretch min (m)<input type="number" id="blindMin" value="20" step="5" min="5" max="200"></label>
+    </div>
+    <label class="chk"><input type="checkbox" id="showView" checked> Show what is visible from the marker</label>
+    <label class="chk"><input type="checkbox" id="showSlope"> Show slope over 15 and 20 degrees</label>
+    <div id="sunReadout" class="readout"></div>
+  </section>
+
+  <section class="pane" id="flagsPane">
+    <h2>Flags and evidence level</h2>
+    <ul id="flags"></ul>
+    <h2>Data and assumptions</h2>
+    <div id="prov"></div>
+    <h2>Validation</h2>
+    <p class="note">Not run yet. Planned: render the predicted skyline at real Curiosity stops and compare with the real panoramas (angular skyline error, landmark hit rate). Until results exist here, treat every prediction as unvalidated.</p>
+  </section>
+</main>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
