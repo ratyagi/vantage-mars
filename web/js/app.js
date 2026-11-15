@@ -528,9 +528,10 @@ function cuff() {
     kpi(maxSl > 20 ? "bad" : maxSl > 15 ? "warn" : "", "Max slope", maxSl.toFixed(0), "\u00b0", "next 120 m") +
     (nextBlind ? kpi("warn", "Blind stretch", Math.max(0, nextBlind.from - cur.s).toFixed(0), "m ahead", nextBlind.length.toFixed(0) + " m long") : kpi("ok", "Blind stretch", "none", "", "next 120 m")) +
     kpi(sun.elevDeg < thr ? "warn" : "", "Sun elevation", sun.elevDeg.toFixed(0), "\u00b0", sun.elevDeg < thr ? "low sun" : "ok") +
-    (sb ? kpi($("sepAlert").checked && sb.ret > +$("shelterMin").value ? "bad" : "", "Home, fastest", sb.ret.toFixed(0), "min", "retrace route " + (S.cum && S.cum.length ? S.cum[S.rows.indexOf(cur)].toFixed(0) : "--") + " min") : "") +
-    (sb ? kpi(sb.limiting.min < 0 ? "bad" : sb.limiting.min < 30 ? "warn" : "ok", "Start back within", Math.max(0, sb.limiting.min).toFixed(0), "min", "limited by " + sb.limiting.k) : "") +
-    (S.radio ? kpi(S.radio.worst.len > 0 ? "warn" : "ok", "Longest radio gap", S.radio.worst.len.toFixed(0), "m", (S.radio.gapMin ? S.radio.gapMin.toFixed(0) + " min walking" : "none") + (S.relay?.picks?.length ? ", relay R1 closes " + Math.round((S.relay.picks[0].coveredFrac - S.relay.before) * 100) + "% of the route" : "")) : "") +
+    (sb ? kpi($("sepAlert").checked && sb.ret > +$("shelterMin").value ? "bad" : "", "Home, fastest", sb.ret.toFixed(0), "min", "retrace route " + (S.cum && S.cum.length ? S.cum[S.rows.indexOf(cur)].toFixed(0) : "--") + " min") : kpi("", "Home, fastest", "--", "", "place a habitat")) +
+    (sb ? kpi(sb.limiting.min < 0 ? "bad" : sb.limiting.min < 30 ? "warn" : "ok", "Start back within", Math.max(0, sb.limiting.min).toFixed(0), "min", "limited by " + sb.limiting.k) : kpi("", "Start back within", "--", "", "place a habitat")) +
+    (S.radio ? kpi(S.radio.worst.len > 0 ? "warn" : "ok", "Longest radio gap", S.radio.worst.len.toFixed(0), "m", (S.radio.gapMin ? S.radio.gapMin.toFixed(0) + " min walking" : "none") + (S.relay?.picks?.length ? ", relay R1 closes " + Math.round((S.relay.picks[0].coveredFrac - S.relay.before) * 100) + "%" : "")) : kpi("", "Longest radio gap", "--", "", "place a habitat")) +
+    kpi(S.T.slopeDeg(cur.x, cur.y, SLOPE_BASELINE_M) > 20 ? "bad" : "", "Slope here", (S.T.slopeDeg(cur.x, cur.y, SLOPE_BASELINE_M) || 0).toFixed(0), "\u00b0", "5 m baseline") +
     kpi("", "Walk time", S.rows.length ? walkMinutes(S.T, S.rows).toFixed(0) : "--", "min", "assumed pace") +
     `<div class="cuffnote">Unvalidated terrain-model prediction.</div>`;
 }
@@ -616,7 +617,7 @@ function bind() {
   $("btnPlay").onclick = () => {
     if (timer) { clearInterval(timer); timer = null; $("btnPlay").textContent = "Play"; return; }
     $("btnPlay").textContent = "Pause";
-    timer = setInterval(() => { let v = +$("pos").value + 4; if (v > 1000) v = 0; $("pos").value = v; refresh(); scheduleViewshed(); }, 90);
+    timer = setInterval(() => { let v = +$("pos").value + 3; if (v > 1000) v = 0; $("pos").value = v; refresh(); scheduleViewshed(); }, 260);
   };
   window.addEventListener("resize", () => { setupMap(); refresh(); });
   syncZoomLabel();

@@ -198,3 +198,19 @@ body{font-variant-numeric:tabular-nums}
 @keyframes holdpulse{50%{box-shadow:0 0 0 6px rgba(239,91,91,.22)}}
 .verdict[data-level=bad]{animation:holdpulse 1.4s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.verdict[data-level=bad]{animation:none}}
+
+/* stable layout: nothing resizes while the position changes */
+.verdict{min-height:178px}
+.vreason{height:2.7em;min-height:0;line-height:1.35}
+.vstats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;height:48px;flex-wrap:nowrap}
+.vstats b{white-space:nowrap;font-size:16px}
+.kpi{min-height:96px}
+.kpi .s{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.5em;line-height:1.25}
+.kpi .v{white-space:nowrap}
+#flags{height:236px;max-height:none;overflow-y:auto;align-content:flex-start}
+#flags::-webkit-scrollbar{width:6px}#flags::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px}
+@media (min-width:1101px){
+  .side{position:static;max-height:none;overflow:visible}
+  .lower{align-items:stretch}
+  .lower #strip{height:318px;max-height:none;flex:none}
+}
