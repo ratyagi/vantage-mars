@@ -271,9 +271,14 @@ function drawStrip() {
 }
 
 // ---------- panorama ----------
-function drawPano() {
-  const c = $("pano"), ctx = c.getContext("2d"), d = Math.min(2, window.devicePixelRatio || 1);
-  const CW = Math.max(320, c.clientWidth || 500), CH = Math.round(CW / 3.2);
+function drawPano(big) {
+  if (big === true) return drawPanoOn($("panoBig"), 2.4);
+  drawPanoOn($("pano"), 3.2);
+  if (!$("walker").classList.contains("hidden")) { drawPanoOn($("panoBig"), 2.4); walkerHud(); }
+}
+function drawPanoOn(c, ratio) {
+  const ctx = c.getContext("2d"), d = Math.min(2, window.devicePixelRatio || 1);
+  const CW = Math.max(320, c.clientWidth || 500), CH = Math.round(CW / ratio);
   const W = Math.round(CW * d), H = Math.round(CH * d);
   c.width = W; c.height = H;
   const cur = currentSample();
@@ -328,8 +333,8 @@ function drawPano() {
   ctx.fillStyle = "rgba(8,10,13,.75)"; ctx.fillRect(0, CH - 18, CW, 18);
   ctx.textAlign = "left"; ctx.fillStyle = "#c3cad4"; ctx.fillText(bar, 8, CH - 5);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  $("panoTag").textContent = S.T.meta.synthetic ? "SYNTHETIC" : "predicted, unvalidated";
-  $("panoNote").textContent = "Terrain only: no rocks below DEM cell size, no atmosphere, no color. White line is the predicted skyline. Green markers are in line of sight, red are hidden (HAB habitat, ROV rover, S summits).";
+  if (c.id === "pano") $("panoTag").textContent = S.T.meta.synthetic ? "SYNTHETIC" : "predicted, unvalidated";
+  if (c.id === "pano") $("panoNote").textContent = "Terrain only: no rocks below DEM cell size, no atmosphere, no color. White line is the predicted skyline. Green markers are in line of sight, red are hidden (HAB habitat, ROV rover, S summits).";
 }
 
 // ---------- flags ----------
@@ -504,6 +509,30 @@ function defaultScene() {
   }
   S.landmarks = suggestLandmarks(T, S.route).map((c, i) => ({ x: c.x, y: c.y, name: "Summit " + (i + 1) }));
 }
+
+// ---------- walker view (full screen) ----------
+function walkerHud() {
+  const v = $("verdict");
+  const h = $("wHud");
+  h.dataset.level = v.dataset.level;
+  h.innerHTML = `<div class="wv">${$("vLabel").textContent}</div><div class="wr">${$("vReason").textContent}</div><div class="ws">${$("vStats").innerHTML}</div>`;
+}
+function walkerOpen() { $("walker").classList.remove("hidden"); drawPano(); walkerHud(); }
+function walkerClose() { $("walker").classList.add("hidden"); }
+$("btnWalker").onclick = walkerOpen;
+$("btnExpand").onclick = walkerOpen;
+$("wClose").onclick = walkerClose;
+window.addEventListener("keydown", (e) => {
+  if ($("walker").classList.contains("hidden")) return;
+  const pos = $("pos");
+  if (e.key === "Escape") walkerClose();
+  else if (e.key === "ArrowRight" && !e.shiftKey) { pos.value = Math.min(1000, +pos.value + 8); recompute(); }
+  else if (e.key === "ArrowLeft" && !e.shiftKey) { pos.value = Math.max(0, +pos.value - 8); recompute(); }
+  else if (e.shiftKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+    $("lookMode").value = "manual"; const a = ((+$("lookAz").value + (e.key === "ArrowRight" ? 10 : -10)) % 360 + 360) % 360; $("lookAz").value = a; recompute();
+  } else if (e.key === "t" || e.key === "T") { $("lookMode").value = "travel"; recompute(); }
+});
+window.addEventListener("resize", () => { if (!$("walker").classList.contains("hidden")) drawPano(); });
 
 // ---------- guided tour ----------
 const TOUR = [

@@ -20,7 +20,7 @@
   <div class="chips">
     <span class="chip" id="dataBadge">loading terrain</span>
     <span class="chip warn" id="valChip" title="Predictions are not yet compared with real Curiosity panoramas">Validation: not run</span>
-    <button class="chip btnchip" id="btnTour">Tour</button><span class="chip" id="sunChip">Sun --</span>
+    <button class="chip btnchip" id="btnWalker">Walker view</button><button class="chip btnchip" id="btnTour">Tour</button><span class="chip" id="sunChip">Sun --</span>
   </div>
 </header>
 
@@ -38,6 +38,8 @@
   <div class="wbtn"><button id="wTour" class="primary">Take the 60 second tour</button><button id="wExplore">Explore</button></div>
   <div class="wnote">Terrain-model predictions, not yet validated against real panoramas. Thresholds are labeled assumptions.</div>
 </div></div>
+<div id="walker" class="walker hidden"><div class="wtop"><span class="wtitle">WALKER VIEW</span><span class="whint">Left / Right: walk along the route &middot; Shift + Left / Right: look around &middot; T: look along travel &middot; Esc: close</span><button id="wClose" class="pill">Close</button></div>
+  <canvas id="panoBig"></canvas><div id="wHud" class="whud" data-level="ok"></div></div>
 <div id="banner" class="banner hidden"></div>
 
 <div class="app">
@@ -86,7 +88,7 @@
       <div class="vstats" id="vStats"></div>
     </div>
     <div class="card">
-      <div class="cardhead"><h2>Predicted view</h2><span class="tag" id="panoTag"></span></div>
+      <div class="cardhead"><h2>Predicted view</h2><span><span class="tag" id="panoTag"></span> <button id="btnExpand" class="pill">Walker view</button></span></div>
       <canvas id="pano"></canvas>
       <p class="note" id="panoNote"></p>
     </div>
