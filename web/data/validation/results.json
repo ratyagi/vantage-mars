@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-15T22:35:13.831Z",
+ "generated_utc": "2026-11-15T22:39:36.283Z",
  "method": {
   "eye_height_m": 2,
   "predicted_skyline": "web/js/visibility.js skyline(), 0.1 deg azimuth, maxRange 2500 m, DEM web/data/dem.f32 (2.5 x 2.5 km window, 1 m)",
@@ -7,6 +7,99 @@
   "window_limited_rule": "horizon point within 100 m of where the ray leaves the DEM window",
   "tuning": "none; no model parameter was changed or fitted"
  },
+ "images": [
+  {
+   "sol": 4634,
+   "site_drive": "118_1608",
+   "imageid": "NLB_808884327EDR_F1181608NCAM00252M_",
+   "camera": "Navcam left (NAV_LEFT_B), full frame 1024x1024",
+   "date_taken_utc": "2025-08-19T15:12:18.000Z",
+   "lmst": "Sol-04634M15:28:45.460",
+   "mast_az_deg": 89.5842,
+   "mast_el_deg": -12.7602,
+   "credit": "NASA/JPL-Caltech",
+   "page": "https://mars.nasa.gov/raw_images/1503366",
+   "jpg": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04634/opgs/edr/ncam/NLB_808884327EDR_F1181608NCAM00252M_.JPG"
+  },
+  {
+   "sol": 4634,
+   "site_drive": "118_1608",
+   "imageid": "NLB_808884358EDR_F1181608NCAM00252M_",
+   "camera": "Navcam left (NAV_LEFT_B), full frame 1024x1024",
+   "date_taken_utc": "2025-08-19T15:12:49.000Z",
+   "lmst": "Sol-04634M15:29:15.680",
+   "mast_az_deg": 117.359,
+   "mast_el_deg": -5.0215,
+   "credit": "NASA/JPL-Caltech",
+   "page": "https://mars.nasa.gov/raw_images/1503369",
+   "jpg": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04634/opgs/edr/ncam/NLB_808884358EDR_F1181608NCAM00252M_.JPG"
+  },
+  {
+   "sol": 4634,
+   "site_drive": "118_1608",
+   "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
+   "camera": "Navcam left (NAV_LEFT_B), full frame 1024x1024",
+   "date_taken_utc": "2025-08-19T15:13:20.000Z",
+   "lmst": "Sol-04634M15:29:46.154",
+   "mast_az_deg": 145.839,
+   "mast_el_deg": -0.287998,
+   "credit": "NASA/JPL-Caltech",
+   "page": "https://mars.nasa.gov/raw_images/1503373",
+   "jpg": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04634/opgs/edr/ncam/NLB_808884389EDR_F1181608NCAM00252M_.JPG"
+  },
+  {
+   "sol": 4748,
+   "site_drive": "120_346",
+   "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
+   "camera": "Navcam left (NAV_LEFT_B), full frame 1024x1024",
+   "date_taken_utc": "2025-12-14T15:44:47.000Z",
+   "lmst": "Sol-04748M12:52:34.852",
+   "mast_az_deg": 145.544,
+   "mast_el_deg": -7.22268,
+   "credit": "NASA/JPL-Caltech",
+   "page": "https://mars.nasa.gov/raw_images/1539447",
+   "jpg": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04748/opgs/edr/ncam/NLB_818994980EDR_F1200346NCAM00271M_.JPG"
+  },
+  {
+   "sol": 4748,
+   "site_drive": "120_346",
+   "imageid": "NLB_818995760EDR_F1200346NCAM00272M_",
+   "camera": "Navcam left (NAV_LEFT_B), full frame 1024x1024",
+   "date_taken_utc": "2025-12-14T15:57:47.000Z",
+   "lmst": "Sol-04748M13:05:14.060",
+   "mast_az_deg": 259.845,
+   "mast_el_deg": -12.4801,
+   "credit": "NASA/JPL-Caltech",
+   "page": "https://mars.nasa.gov/raw_images/1539559",
+   "jpg": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04748/opgs/edr/ncam/NLB_818995760EDR_F1200346NCAM00272M_.JPG"
+  },
+  {
+   "sol": 4839,
+   "site_drive": "121_396",
+   "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
+   "camera": "Navcam left (NAV_LEFT_B), full frame 1024x1024",
+   "date_taken_utc": "2026-03-18T04:58:23.000Z",
+   "lmst": "Sol-04839M14:01:49.641",
+   "mast_az_deg": 133.752,
+   "mast_el_deg": -10.0516,
+   "credit": "NASA/JPL-Caltech",
+   "page": "https://mars.nasa.gov/raw_images/1566029",
+   "jpg": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04839/opgs/edr/ncam/NLB_827077719EDR_F1210396NCAM00268M_.JPG"
+  },
+  {
+   "sol": 4839,
+   "site_drive": "121_396",
+   "imageid": "NLB_827077750EDR_F1210396NCAM00268M_",
+   "camera": "Navcam left (NAV_LEFT_B), full frame 1024x1024",
+   "date_taken_utc": "2026-03-18T04:58:54.000Z",
+   "lmst": "Sol-04839M14:02:19.869",
+   "mast_az_deg": 162.401,
+   "mast_el_deg": -5.69723,
+   "credit": "NASA/JPL-Caltech",
+   "page": "https://mars.nasa.gov/raw_images/1566032",
+   "jpg": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04839/opgs/edr/ncam/NLB_827077750EDR_F1210396NCAM00268M_.JPG"
+  }
+ ],
  "attitude_check": [
   {
    "rmc": "118_1608",
@@ -32,69 +125,115 @@
    "imageid": "NLB_808884327EDR_F1181608NCAM00252M_",
    "traced": 95,
    "dropped_frame_top": 0,
-   "dropped_isolated": 0
+   "dropped_isolated": 0,
+   "dropped_tracer_ramp": 0,
+   "dropped_manual": 0
   },
   {
    "imageid": "NLB_808884358EDR_F1181608NCAM00252M_",
    "traced": 108,
    "dropped_frame_top": 0,
-   "dropped_isolated": 3
+   "dropped_isolated": 3,
+   "dropped_tracer_ramp": 0,
+   "dropped_manual": 0
   },
   {
    "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
    "traced": 97,
    "dropped_frame_top": 8,
-   "dropped_isolated": 15
+   "dropped_isolated": 15,
+   "dropped_tracer_ramp": 0,
+   "dropped_manual": 10
   },
   {
    "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
    "traced": 83,
    "dropped_frame_top": 0,
-   "dropped_isolated": 6
+   "dropped_isolated": 6,
+   "dropped_tracer_ramp": 1,
+   "dropped_manual": 6
   },
   {
    "imageid": "NLB_818995760EDR_F1200346NCAM00272M_",
    "traced": 103,
    "dropped_frame_top": 0,
-   "dropped_isolated": 2
+   "dropped_isolated": 2,
+   "dropped_tracer_ramp": 2,
+   "dropped_manual": 4
   },
   {
    "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
    "traced": 84,
    "dropped_frame_top": 10,
-   "dropped_isolated": 6
+   "dropped_isolated": 6,
+   "dropped_tracer_ramp": 5,
+   "dropped_manual": 45
   },
   {
    "imageid": "NLB_827077750EDR_F1210396NCAM00268M_",
    "traced": 57,
    "dropped_frame_top": 0,
-   "dropped_isolated": 3
+   "dropped_isolated": 3,
+   "dropped_tracer_ramp": 1,
+   "dropped_manual": 0
+  }
+ ],
+ "manual_exclusions": [
+  {
+   "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
+   "colMin": 340,
+   "colMax": 490,
+   "reason": "trace scattered over faint distant hills; not consistently on the sky boundary"
+  },
+  {
+   "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
+   "colMin": 0,
+   "colMax": 295,
+   "reason": "trace on a lower ridge with terrain visible above it"
+  },
+  {
+   "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
+   "colMin": 885,
+   "colMax": 1023,
+   "reason": "trace drops below the skyline at the right edge"
+  },
+  {
+   "imageid": "NLB_818995760EDR_F1200346NCAM00272M_",
+   "colMin": 0,
+   "colMax": 255,
+   "reason": "trace on a lower ridge with terrain visible above it; the true sky boundary starts near column 256"
+  },
+  {
+   "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
+   "colMin": 260,
+   "colMax": 660,
+   "reason": "dust haze: the far skyline is not distinguishable, the trace marks the farthest visible terrain edge"
   }
  ],
  "pooled": {
   "all": {
-   "n": 574,
-   "rmse_deg": 3.456,
-   "bias_deg": -1.995,
-   "median_abs_deg": 0.918,
-   "within_1deg": 0.517,
-   "within_2deg": 0.573
+   "n": 500,
+   "rmse_deg": 3.579,
+   "bias_deg": -2.363,
+   "median_abs_deg": 0.964,
+   "within_1deg": 0.504,
+   "within_2deg": 0.552
   },
   "horizon_inside_window": {
-   "n": 560,
-   "rmse_deg": 3.453,
-   "bias_deg": -1.994,
-   "median_abs_deg": 0.918,
-   "within_1deg": 0.518,
-   "within_2deg": 0.575
+   "n": 494,
+   "rmse_deg": 3.558,
+   "bias_deg": -2.331,
+   "median_abs_deg": 0.94,
+   "within_1deg": 0.51,
+   "within_2deg": 0.559
   },
   "horizon_window_limited": {
-   "n": 14,
-   "rmse_deg": 3.558,
-   "bias_deg": -2.009,
-   "median_abs_deg": 4.923,
-   "within_1deg": 0.5,
-   "within_2deg": 0.5
+   "n": 6,
+   "rmse_deg": 5.029,
+   "bias_deg": -5.029,
+   "median_abs_deg": 5.036,
+   "within_1deg": 0,
+   "within_2deg": 0
   }
  },
  "stops": [
@@ -118,20 +257,20 @@
    "azimuth_min_deg": 0.1,
    "azimuth_max_deg": 359.8,
    "skyline_all": {
-    "n": 274,
-    "rmse_deg": 4.834,
-    "bias_deg": -4.352,
-    "median_abs_deg": 4.813,
-    "within_1deg": 0.117,
-    "within_2deg": 0.161
+    "n": 264,
+    "rmse_deg": 4.903,
+    "bias_deg": -4.433,
+    "median_abs_deg": 4.851,
+    "within_1deg": 0.121,
+    "within_2deg": 0.152
    },
    "skyline_horizon_inside_window": {
-    "n": 268,
-    "rmse_deg": 4.829,
-    "bias_deg": -4.337,
-    "median_abs_deg": 4.765,
-    "within_1deg": 0.119,
-    "within_2deg": 0.164
+    "n": 258,
+    "rmse_deg": 4.9,
+    "bias_deg": -4.419,
+    "median_abs_deg": 4.822,
+    "within_1deg": 0.124,
+    "within_2deg": 0.155
    },
    "skyline_horizon_window_limited": {
     "n": 6,
@@ -141,7 +280,7 @@
     "within_1deg": 0,
     "within_2deg": 0
    },
-   "window_limited_fraction": 0.022,
+   "window_limited_fraction": 0.023,
    "real_minus_window_note": "error = predicted minus real elevation angle (negative = model horizon too low)",
    "skyline_peaks": {
     "predicted_peaks": [
@@ -173,11 +312,6 @@
       "matched": true
      },
      {
-      "az": 47.21,
-      "el": 0.94,
-      "matched": false
-     },
-     {
       "az": 60.48,
       "el": 3.6,
       "matched": false
@@ -189,50 +323,50 @@
      }
     ],
     "precision": 0.25,
-    "recall": 0.25
+    "recall": 0.333
    },
    "position_sensitivity": [
     {
      "shift_m": 0,
      "directions": 1,
-     "rmse_mean_deg": 4.834,
-     "rmse_min_deg": 4.834,
-     "rmse_max_deg": 4.834
+     "rmse_mean_deg": 4.903,
+     "rmse_min_deg": 4.903,
+     "rmse_max_deg": 4.903
     },
     {
      "shift_m": 5,
      "directions": 8,
-     "rmse_mean_deg": 4.742,
-     "rmse_min_deg": 4.444,
-     "rmse_max_deg": 4.975
+     "rmse_mean_deg": 4.808,
+     "rmse_min_deg": 4.505,
+     "rmse_max_deg": 5.046
     },
     {
      "shift_m": 10,
      "directions": 8,
-     "rmse_mean_deg": 4.82,
-     "rmse_min_deg": 4.332,
-     "rmse_max_deg": 5.06
+     "rmse_mean_deg": 4.887,
+     "rmse_min_deg": 4.394,
+     "rmse_max_deg": 5.129
     },
     {
      "shift_m": 25,
      "directions": 8,
-     "rmse_mean_deg": 4.999,
-     "rmse_min_deg": 4.696,
-     "rmse_max_deg": 5.4
+     "rmse_mean_deg": 5.07,
+     "rmse_min_deg": 4.769,
+     "rmse_max_deg": 5.477
     }
    ],
    "eye_height_sensitivity": [
     {
      "eye_h_m": 1.5,
-     "rmse_deg": 4.538
+     "rmse_deg": 4.601
     },
     {
      "eye_h_m": 2,
-     "rmse_deg": 4.834
+     "rmse_deg": 4.903
     },
     {
      "eye_h_m": 2.5,
-     "rmse_deg": 4.889
+     "rmse_deg": 4.959
     }
    ],
    "columns": [
@@ -1711,126 +1845,6 @@
      "window_exit_m": 1288,
      "window_limited": false,
      "err": -5.269
-    },
-    {
-     "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
-     "col": 372,
-     "row": 127,
-     "az": 40.414,
-     "real_el": 0.951,
-     "pred_el": -2.89,
-     "pred_horizon_dist_m": 1282,
-     "window_exit_m": 1400,
-     "window_limited": false,
-     "err": -3.84
-    },
-    {
-     "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
-     "col": 380,
-     "row": 126,
-     "az": 40.772,
-     "real_el": 0.961,
-     "pred_el": -2.516,
-     "pred_horizon_dist_m": 1294,
-     "window_exit_m": 1408,
-     "window_limited": false,
-     "err": -3.477
-    },
-    {
-     "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
-     "col": 388,
-     "row": 130,
-     "az": 41.105,
-     "real_el": 0.761,
-     "pred_el": -1.776,
-     "pred_horizon_dist_m": 1266,
-     "window_exit_m": 1415,
-     "window_limited": false,
-     "err": -2.537
-    },
-    {
-     "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
-     "col": 412,
-     "row": 148,
-     "az": 42.081,
-     "real_el": -0.101,
-     "pred_el": -1.461,
-     "pred_horizon_dist_m": 1296,
-     "window_exit_m": 1437,
-     "window_limited": false,
-     "err": -1.359
-    },
-    {
-     "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
-     "col": 420,
-     "row": 150,
-     "az": 42.428,
-     "real_el": -0.219,
-     "pred_el": -1.415,
-     "pred_horizon_dist_m": 1282,
-     "window_exit_m": 1445,
-     "window_limited": false,
-     "err": -1.196
-    },
-    {
-     "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
-     "col": 436,
-     "row": 116,
-     "az": 43.296,
-     "real_el": 1.163,
-     "pred_el": -1.185,
-     "pred_horizon_dist_m": 1252,
-     "window_exit_m": 1465,
-     "window_limited": false,
-     "err": -2.348
-    },
-    {
-     "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
-     "col": 444,
-     "row": 117,
-     "az": 43.646,
-     "real_el": 1.089,
-     "pred_el": -1.132,
-     "pred_horizon_dist_m": 1252,
-     "window_exit_m": 1473,
-     "window_limited": false,
-     "err": -2.221
-    },
-    {
-     "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
-     "col": 452,
-     "row": 119,
-     "az": 43.993,
-     "real_el": 0.973,
-     "pred_el": -1.066,
-     "pred_horizon_dist_m": 1226,
-     "window_exit_m": 1482,
-     "window_limited": false,
-     "err": -2.039
-    },
-    {
-     "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
-     "col": 460,
-     "row": 120,
-     "az": 44.343,
-     "real_el": 0.899,
-     "pred_el": -0.958,
-     "pred_horizon_dist_m": 1228,
-     "window_exit_m": 1491,
-     "window_limited": false,
-     "err": -1.856
-    },
-    {
-     "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
-     "col": 476,
-     "row": 124,
-     "az": 45.038,
-     "real_el": 0.665,
-     "pred_el": -0.744,
-     "pred_horizon_dist_m": 1216,
-     "window_exit_m": 1509,
-     "window_limited": false,
-     "err": -1.409
     },
     {
      "imageid": "NLB_808884389EDR_F1181608NCAM00252M_",
@@ -3542,33 +3556,28 @@
     "NLB_818995760EDR_F1200346NCAM00272M_",
     "NLB_818994980EDR_F1200346NCAM00271M_"
    ],
-   "azimuth_min_deg": 33.3,
+   "azimuth_min_deg": 35.1,
    "azimuth_max_deg": 308.6,
    "skyline_all": {
-    "n": 178,
-    "rmse_deg": 1.375,
-    "bias_deg": 0.393,
-    "median_abs_deg": 0.122,
-    "within_1deg": 0.882,
-    "within_2deg": 0.933
+    "n": 165,
+    "rmse_deg": 0.427,
+    "bias_deg": 0.052,
+    "median_abs_deg": 0.103,
+    "within_1deg": 0.952,
+    "within_2deg": 1
    },
    "skyline_horizon_inside_window": {
-    "n": 177,
-    "rmse_deg": 1.328,
-    "bias_deg": 0.367,
-    "median_abs_deg": 0.119,
-    "within_1deg": 0.887,
-    "within_2deg": 0.938
+    "n": 165,
+    "rmse_deg": 0.427,
+    "bias_deg": 0.052,
+    "median_abs_deg": 0.103,
+    "within_1deg": 0.952,
+    "within_2deg": 1
    },
    "skyline_horizon_window_limited": {
-    "n": 1,
-    "rmse_deg": 4.923,
-    "bias_deg": 4.923,
-    "median_abs_deg": 4.923,
-    "within_1deg": 0,
-    "within_2deg": 0
+    "n": 0
    },
-   "window_limited_fraction": 0.006,
+   "window_limited_fraction": 0,
    "real_minus_window_note": "error = predicted minus real elevation angle (negative = model horizon too low)",
    "skyline_peaks": {
     "predicted_peaks": [
@@ -3588,133 +3597,56 @@
       "az": 55.45,
       "el": 5.21,
       "matched": true
-     },
-     {
-      "az": 285.39,
-      "el": 6.34,
-      "matched": false
      }
     ],
     "precision": 0.5,
-    "recall": 0.5
+    "recall": 1
    },
    "position_sensitivity": [
     {
      "shift_m": 0,
      "directions": 1,
-     "rmse_mean_deg": 1.375,
-     "rmse_min_deg": 1.375,
-     "rmse_max_deg": 1.375
+     "rmse_mean_deg": 0.427,
+     "rmse_min_deg": 0.427,
+     "rmse_max_deg": 0.427
     },
     {
      "shift_m": 5,
      "directions": 8,
-     "rmse_mean_deg": 1.376,
-     "rmse_min_deg": 1.347,
-     "rmse_max_deg": 1.407
+     "rmse_mean_deg": 0.46,
+     "rmse_min_deg": 0.346,
+     "rmse_max_deg": 0.566
     },
     {
      "shift_m": 10,
      "directions": 8,
-     "rmse_mean_deg": 1.363,
-     "rmse_min_deg": 1.327,
-     "rmse_max_deg": 1.396
+     "rmse_mean_deg": 0.529,
+     "rmse_min_deg": 0.391,
+     "rmse_max_deg": 0.722
     },
     {
      "shift_m": 25,
      "directions": 8,
-     "rmse_mean_deg": 1.482,
-     "rmse_min_deg": 1.247,
-     "rmse_max_deg": 1.748
+     "rmse_mean_deg": 0.811,
+     "rmse_min_deg": 0.573,
+     "rmse_max_deg": 1.088
     }
    ],
    "eye_height_sensitivity": [
     {
      "eye_h_m": 1.5,
-     "rmse_deg": 1.407
+     "rmse_deg": 0.464
     },
     {
      "eye_h_m": 2,
-     "rmse_deg": 1.375
+     "rmse_deg": 0.427
     },
     {
      "eye_h_m": 2.5,
-     "rmse_deg": 1.352
+     "rmse_deg": 0.423
     }
    ],
    "columns": [
-    {
-     "imageid": "NLB_818995760EDR_F1200346NCAM00272M_",
-     "col": 204,
-     "row": 242,
-     "az": 33.346,
-     "real_el": -7.98,
-     "pred_el": -3.057,
-     "pred_horizon_dist_m": 1296,
-     "window_exit_m": 1386,
-     "window_limited": true,
-     "err": 4.923
-    },
-    {
-     "imageid": "NLB_818995760EDR_F1200346NCAM00272M_",
-     "col": 212,
-     "row": 244,
-     "az": 33.702,
-     "real_el": -7.996,
-     "pred_el": -2.867,
-     "pred_horizon_dist_m": 1284,
-     "window_exit_m": 1392,
-     "window_limited": false,
-     "err": 5.129
-    },
-    {
-     "imageid": "NLB_818995760EDR_F1200346NCAM00272M_",
-     "col": 220,
-     "row": 245,
-     "az": 34.052,
-     "real_el": -7.969,
-     "pred_el": -2.541,
-     "pred_horizon_dist_m": 1272,
-     "window_exit_m": 1398,
-     "window_limited": false,
-     "err": 5.428
-    },
-    {
-     "imageid": "NLB_818995760EDR_F1200346NCAM00272M_",
-     "col": 228,
-     "row": 245,
-     "az": 34.396,
-     "real_el": -7.898,
-     "pred_el": -1.663,
-     "pred_horizon_dist_m": 1264,
-     "window_exit_m": 1404,
-     "window_limited": false,
-     "err": 6.234
-    },
-    {
-     "imageid": "NLB_818995760EDR_F1200346NCAM00272M_",
-     "col": 244,
-     "row": 195,
-     "az": 34.731,
-     "real_el": -5.607,
-     "pred_el": -1.896,
-     "pred_horizon_dist_m": 1268,
-     "window_exit_m": 1409,
-     "window_limited": false,
-     "err": 3.711
-    },
-    {
-     "imageid": "NLB_818995760EDR_F1200346NCAM00272M_",
-     "col": 252,
-     "row": 155,
-     "az": 34.79,
-     "real_el": -3.842,
-     "pred_el": -1.875,
-     "pred_horizon_dist_m": 1282,
-     "window_exit_m": 1410,
-     "window_limited": false,
-     "err": 1.967
-    },
     {
      "imageid": "NLB_818995760EDR_F1200346NCAM00272M_",
      "col": 268,
@@ -4857,90 +4789,6 @@
     },
     {
      "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
-     "col": 244,
-     "row": 99,
-     "az": 281.546,
-     "real_el": 3.306,
-     "pred_el": 9.033,
-     "pred_horizon_dist_m": 208,
-     "window_exit_m": 1150,
-     "window_limited": false,
-     "err": 5.727
-    },
-    {
-     "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
-     "col": 252,
-     "row": 98,
-     "az": 281.893,
-     "real_el": 3.29,
-     "pred_el": 8.853,
-     "pred_horizon_dist_m": 208,
-     "window_exit_m": 1152,
-     "window_limited": false,
-     "err": 5.562
-    },
-    {
-     "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
-     "col": 260,
-     "row": 98,
-     "az": 282.232,
-     "real_el": 3.234,
-     "pred_el": 8.462,
-     "pred_horizon_dist_m": 208,
-     "window_exit_m": 1153,
-     "window_limited": false,
-     "err": 5.228
-    },
-    {
-     "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
-     "col": 268,
-     "row": 98,
-     "az": 282.571,
-     "real_el": 3.178,
-     "pred_el": 8.05,
-     "pred_horizon_dist_m": 208,
-     "window_exit_m": 1154,
-     "window_limited": false,
-     "err": 4.872
-    },
-    {
-     "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
-     "col": 276,
-     "row": 97,
-     "az": 282.919,
-     "real_el": 3.161,
-     "pred_el": 7.891,
-     "pred_horizon_dist_m": 202,
-     "window_exit_m": 1156,
-     "window_limited": false,
-     "err": 4.729
-    },
-    {
-     "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
-     "col": 284,
-     "row": 97,
-     "az": 283.26,
-     "real_el": 3.104,
-     "pred_el": 7.962,
-     "pred_horizon_dist_m": 200,
-     "window_exit_m": 1158,
-     "window_limited": false,
-     "err": 4.858
-    },
-    {
-     "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
-     "col": 300,
-     "row": 55,
-     "az": 284.321,
-     "real_el": 4.68,
-     "pred_el": 7.688,
-     "pred_horizon_dist_m": 202,
-     "window_exit_m": 1163,
-     "window_limited": false,
-     "err": 3.008
-    },
-    {
-     "imageid": "NLB_818994980EDR_F1200346NCAM00271M_",
      "col": 316,
      "row": 10,
      "az": 285.394,
@@ -5797,642 +5645,80 @@
     "NLB_827077719EDR_F1210396NCAM00268M_",
     "NLB_827077750EDR_F1210396NCAM00268M_"
    ],
-   "azimuth_min_deg": 1,
+   "azimuth_min_deg": 20.5,
    "azimuth_max_deg": 49.6,
    "skyline_all": {
-    "n": 122,
-    "rmse_deg": 0.973,
-    "bias_deg": -0.183,
-    "median_abs_deg": 0.254,
-    "within_1deg": 0.885,
-    "within_2deg": 0.975
-   },
-   "skyline_horizon_inside_window": {
-    "n": 115,
-    "rmse_deg": 0.996,
-    "bias_deg": -0.169,
-    "median_abs_deg": 0.229,
-    "within_1deg": 0.878,
-    "within_2deg": 0.974
-   },
-   "skyline_horizon_window_limited": {
-    "n": 7,
-    "rmse_deg": 0.422,
-    "bias_deg": -0.411,
-    "median_abs_deg": 0.39,
-    "within_1deg": 1,
+    "n": 71,
+    "rmse_deg": 0.632,
+    "bias_deg": -0.282,
+    "median_abs_deg": 0.092,
+    "within_1deg": 0.887,
     "within_2deg": 1
    },
-   "window_limited_fraction": 0.057,
+   "skyline_horizon_inside_window": {
+    "n": 71,
+    "rmse_deg": 0.632,
+    "bias_deg": -0.282,
+    "median_abs_deg": 0.092,
+    "within_1deg": 0.887,
+    "within_2deg": 1
+   },
+   "skyline_horizon_window_limited": {
+    "n": 0
+   },
+   "window_limited_fraction": 0,
    "real_minus_window_note": "error = predicted minus real elevation angle (negative = model horizon too low)",
    "skyline_peaks": {
-    "predicted_peaks": [
-     {
-      "az": 9.06,
-      "el": -3.15,
-      "matched": true
-     }
-    ],
-    "image_peaks": [
-     {
-      "az": 9.46,
-      "el": -2.88,
-      "matched": true
-     },
-     {
-      "az": 14.61,
-      "el": -3.03,
-      "matched": false
-     }
-    ],
-    "precision": 1,
-    "recall": 0.5
+    "predicted_peaks": [],
+    "image_peaks": [],
+    "precision": null,
+    "recall": null
    },
    "position_sensitivity": [
     {
      "shift_m": 0,
      "directions": 1,
-     "rmse_mean_deg": 0.973,
-     "rmse_min_deg": 0.973,
-     "rmse_max_deg": 0.973
+     "rmse_mean_deg": 0.632,
+     "rmse_min_deg": 0.632,
+     "rmse_max_deg": 0.632
     },
     {
      "shift_m": 5,
      "directions": 8,
-     "rmse_mean_deg": 0.975,
-     "rmse_min_deg": 0.941,
-     "rmse_max_deg": 1.015
+     "rmse_mean_deg": 0.623,
+     "rmse_min_deg": 0.582,
+     "rmse_max_deg": 0.663
     },
     {
      "shift_m": 10,
      "directions": 8,
-     "rmse_mean_deg": 0.987,
-     "rmse_min_deg": 0.907,
-     "rmse_max_deg": 1.087
+     "rmse_mean_deg": 0.629,
+     "rmse_min_deg": 0.576,
+     "rmse_max_deg": 0.683
     },
     {
      "shift_m": 25,
      "directions": 8,
-     "rmse_mean_deg": 1.069,
-     "rmse_min_deg": 0.886,
-     "rmse_max_deg": 1.394
+     "rmse_mean_deg": 0.738,
+     "rmse_min_deg": 0.627,
+     "rmse_max_deg": 0.911
     }
    ],
    "eye_height_sensitivity": [
     {
      "eye_h_m": 1.5,
-     "rmse_deg": 0.968
+     "rmse_deg": 0.613
     },
     {
      "eye_h_m": 2,
-     "rmse_deg": 0.973
+     "rmse_deg": 0.632
     },
     {
      "eye_h_m": 2.5,
-     "rmse_deg": 0.979
+     "rmse_deg": 0.653
     }
    ],
    "columns": [
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 260,
-     "row": 247,
-     "az": 0.982,
-     "real_el": -2.911,
-     "pred_el": -3.393,
-     "pred_horizon_dist_m": 742,
-     "window_exit_m": 1277,
-     "window_limited": false,
-     "err": -0.482
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 268,
-     "row": 246,
-     "az": 1.339,
-     "real_el": -2.937,
-     "pred_el": -3.475,
-     "pred_horizon_dist_m": 744,
-     "window_exit_m": 1277,
-     "window_limited": false,
-     "err": -0.538
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 276,
-     "row": 247,
-     "az": 1.676,
-     "real_el": -3.049,
-     "pred_el": -3.481,
-     "pred_horizon_dist_m": 872,
-     "window_exit_m": 1278,
-     "window_limited": false,
-     "err": -0.432
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 292,
-     "row": 237,
-     "az": 2.475,
-     "real_el": -2.758,
-     "pred_el": -3.579,
-     "pred_horizon_dist_m": 870,
-     "window_exit_m": 1278,
-     "window_limited": false,
-     "err": -0.821
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 300,
-     "row": 236,
-     "az": 2.835,
-     "real_el": -2.783,
-     "pred_el": -3.708,
-     "pred_horizon_dist_m": 848,
-     "window_exit_m": 1279,
-     "window_limited": false,
-     "err": -0.925
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 308,
-     "row": 241,
-     "az": 3.135,
-     "real_el": -3.067,
-     "pred_el": -3.8,
-     "pred_horizon_dist_m": 868,
-     "window_exit_m": 1279,
-     "window_limited": false,
-     "err": -0.733
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 316,
-     "row": 235,
-     "az": 3.545,
-     "real_el": -2.878,
-     "pred_el": -3.907,
-     "pred_horizon_dist_m": 846,
-     "window_exit_m": 1279,
-     "window_limited": false,
-     "err": -1.029
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 340,
-     "row": 234,
-     "az": 4.611,
-     "real_el": -3.04,
-     "pred_el": -3.675,
-     "pred_horizon_dist_m": 980,
-     "window_exit_m": 1281,
-     "window_limited": false,
-     "err": -0.635
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 348,
-     "row": 228,
-     "az": 5.023,
-     "real_el": -2.85,
-     "pred_el": -3.646,
-     "pred_horizon_dist_m": 972,
-     "window_exit_m": 1282,
-     "window_limited": false,
-     "err": -0.796
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 356,
-     "row": 228,
-     "az": 5.376,
-     "real_el": -2.918,
-     "pred_el": -3.574,
-     "pred_horizon_dist_m": 972,
-     "window_exit_m": 1283,
-     "window_limited": false,
-     "err": -0.656
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 364,
-     "row": 227,
-     "az": 5.74,
-     "real_el": -2.943,
-     "pred_el": -3.513,
-     "pred_horizon_dist_m": 966,
-     "window_exit_m": 1283,
-     "window_limited": false,
-     "err": -0.57
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 372,
-     "row": 231,
-     "az": 6.057,
-     "real_el": -3.184,
-     "pred_el": -3.461,
-     "pred_horizon_dist_m": 956,
-     "window_exit_m": 1284,
-     "window_limited": false,
-     "err": -0.276
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 380,
-     "row": 227,
-     "az": 6.45,
-     "real_el": -3.079,
-     "pred_el": -3.393,
-     "pred_horizon_dist_m": 950,
-     "window_exit_m": 1285,
-     "window_limited": false,
-     "err": -0.313
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 388,
-     "row": 225,
-     "az": 6.824,
-     "real_el": -3.061,
-     "pred_el": -3.327,
-     "pred_horizon_dist_m": 944,
-     "window_exit_m": 1286,
-     "window_limited": false,
-     "err": -0.266
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 396,
-     "row": 222,
-     "az": 7.208,
-     "real_el": -2.999,
-     "pred_el": -3.311,
-     "pred_horizon_dist_m": 930,
-     "window_exit_m": 1287,
-     "window_limited": false,
-     "err": -0.312
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 404,
-     "row": 220,
-     "az": 7.582,
-     "real_el": -2.98,
-     "pred_el": -3.281,
-     "pred_horizon_dist_m": 922,
-     "window_exit_m": 1288,
-     "window_limited": false,
-     "err": -0.301
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 412,
-     "row": 219,
-     "az": 7.948,
-     "real_el": -3.005,
-     "pred_el": -3.237,
-     "pred_horizon_dist_m": 912,
-     "window_exit_m": 1289,
-     "window_limited": false,
-     "err": -0.232
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 420,
-     "row": 218,
-     "az": 8.314,
-     "real_el": -3.029,
-     "pred_el": -3.191,
-     "pred_horizon_dist_m": 902,
-     "window_exit_m": 1291,
-     "window_limited": false,
-     "err": -0.162
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 428,
-     "row": 216,
-     "az": 8.689,
-     "real_el": -3.01,
-     "pred_el": -3.157,
-     "pred_horizon_dist_m": 892,
-     "window_exit_m": 1292,
-     "window_limited": false,
-     "err": -0.147
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 436,
-     "row": 214,
-     "az": 9.064,
-     "real_el": -2.99,
-     "pred_el": -3.15,
-     "pred_horizon_dist_m": 884,
-     "window_exit_m": 1293,
-     "window_limited": false,
-     "err": -0.159
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 444,
-     "row": 210,
-     "az": 9.456,
-     "real_el": -2.884,
-     "pred_el": -3.155,
-     "pred_horizon_dist_m": 884,
-     "window_exit_m": 1295,
-     "window_limited": false,
-     "err": -0.271
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 452,
-     "row": 209,
-     "az": 9.822,
-     "real_el": -2.908,
-     "pred_el": -3.209,
-     "pred_horizon_dist_m": 880,
-     "window_exit_m": 1296,
-     "window_limited": false,
-     "err": -0.301
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 460,
-     "row": 212,
-     "az": 10.154,
-     "real_el": -3.105,
-     "pred_el": -3.298,
-     "pred_horizon_dist_m": 866,
-     "window_exit_m": 1297,
-     "window_limited": false,
-     "err": -0.193
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 468,
-     "row": 210,
-     "az": 10.529,
-     "real_el": -3.085,
-     "pred_el": -3.427,
-     "pred_horizon_dist_m": 868,
-     "window_exit_m": 1299,
-     "window_limited": false,
-     "err": -0.342
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 476,
-     "row": 210,
-     "az": 10.887,
-     "real_el": -3.152,
-     "pred_el": -3.554,
-     "pred_horizon_dist_m": 856,
-     "window_exit_m": 1300,
-     "window_limited": false,
-     "err": -0.402
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 484,
-     "row": 209,
-     "az": 11.254,
-     "real_el": -3.176,
-     "pred_el": -3.673,
-     "pred_horizon_dist_m": 840,
-     "window_exit_m": 1302,
-     "window_limited": false,
-     "err": -0.497
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 492,
-     "row": 210,
-     "az": 11.604,
-     "real_el": -3.286,
-     "pred_el": -3.739,
-     "pred_horizon_dist_m": 834,
-     "window_exit_m": 1304,
-     "window_limited": false,
-     "err": -0.453
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 500,
-     "row": 204,
-     "az": 12.011,
-     "real_el": -3.092,
-     "pred_el": -3.718,
-     "pred_horizon_dist_m": 1060,
-     "window_exit_m": 1306,
-     "window_limited": false,
-     "err": -0.626
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 516,
-     "row": 214,
-     "az": 12.647,
-     "real_el": -3.659,
-     "pred_el": -3.761,
-     "pred_horizon_dist_m": 1044,
-     "window_exit_m": 1309,
-     "window_limited": false,
-     "err": -0.101
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 524,
-     "row": 214,
-     "az": 13.006,
-     "real_el": -3.726,
-     "pred_el": -3.824,
-     "pred_horizon_dist_m": 816,
-     "window_exit_m": 1311,
-     "window_limited": false,
-     "err": -0.098
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 532,
-     "row": 212,
-     "az": 13.381,
-     "real_el": -3.704,
-     "pred_el": -3.966,
-     "pred_horizon_dist_m": 812,
-     "window_exit_m": 1313,
-     "window_limited": false,
-     "err": -0.262
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 540,
-     "row": 202,
-     "az": 13.817,
-     "real_el": -3.335,
-     "pred_el": -3.931,
-     "pred_horizon_dist_m": 944,
-     "window_exit_m": 1315,
-     "window_limited": false,
-     "err": -0.596
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 548,
-     "row": 196,
-     "az": 14.221,
-     "real_el": -3.14,
-     "pred_el": -3.869,
-     "pred_horizon_dist_m": 944,
-     "window_exit_m": 1317,
-     "window_limited": false,
-     "err": -0.729
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 556,
-     "row": 192,
-     "az": 14.608,
-     "real_el": -3.033,
-     "pred_el": -4.014,
-     "pred_horizon_dist_m": 948,
-     "window_exit_m": 1320,
-     "window_limited": false,
-     "err": -0.981
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 564,
-     "row": 193,
-     "az": 14.957,
-     "real_el": -3.141,
-     "pred_el": -4.036,
-     "pred_horizon_dist_m": 974,
-     "window_exit_m": 1322,
-     "window_limited": false,
-     "err": -0.895
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 572,
-     "row": 194,
-     "az": 15.307,
-     "real_el": -3.25,
-     "pred_el": -3.862,
-     "pred_horizon_dist_m": 1322,
-     "window_exit_m": 1324,
-     "window_limited": true,
-     "err": -0.612
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 580,
-     "row": 192,
-     "az": 15.678,
-     "real_el": -3.228,
-     "pred_el": -3.674,
-     "pred_horizon_dist_m": 1326,
-     "window_exit_m": 1326,
-     "window_limited": true,
-     "err": -0.446
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 588,
-     "row": 187,
-     "az": 16.07,
-     "real_el": -3.077,
-     "pred_el": -3.425,
-     "pred_horizon_dist_m": 1328,
-     "window_exit_m": 1329,
-     "window_limited": true,
-     "err": -0.348
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 596,
-     "row": 185,
-     "az": 16.439,
-     "real_el": -3.055,
-     "pred_el": -3.511,
-     "pred_horizon_dist_m": 1292,
-     "window_exit_m": 1331,
-     "window_limited": true,
-     "err": -0.456
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 604,
-     "row": 185,
-     "az": 16.794,
-     "real_el": -3.119,
-     "pred_el": -3.509,
-     "pred_horizon_dist_m": 1266,
-     "window_exit_m": 1334,
-     "window_limited": true,
-     "err": -0.39
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 612,
-     "row": 184,
-     "az": 17.156,
-     "real_el": -3.14,
-     "pred_el": -3.437,
-     "pred_horizon_dist_m": 1264,
-     "window_exit_m": 1337,
-     "window_limited": true,
-     "err": -0.297
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 628,
-     "row": 182,
-     "az": 17.878,
-     "real_el": -3.182,
-     "pred_el": -3.508,
-     "pred_horizon_dist_m": 1242,
-     "window_exit_m": 1342,
-     "window_limited": true,
-     "err": -0.326
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 636,
-     "row": 182,
-     "az": 18.231,
-     "real_el": -3.246,
-     "pred_el": -3.473,
-     "pred_horizon_dist_m": 1226,
-     "window_exit_m": 1345,
-     "window_limited": false,
-     "err": -0.227
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 644,
-     "row": 182,
-     "az": 18.584,
-     "real_el": -3.309,
-     "pred_el": -3.56,
-     "pred_horizon_dist_m": 1220,
-     "window_exit_m": 1347,
-     "window_limited": false,
-     "err": -0.251
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 652,
-     "row": 181,
-     "az": 18.943,
-     "real_el": -3.33,
-     "pred_el": -3.637,
-     "pred_horizon_dist_m": 1212,
-     "window_exit_m": 1350,
-     "window_limited": false,
-     "err": -0.307
-    },
     {
      "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
      "col": 684,
@@ -6530,54 +5816,6 @@
      "err": -1.94
     },
     {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 900,
-     "row": 269,
-     "az": 29.199,
-     "real_el": -8.889,
-     "pred_el": -2.924,
-     "pred_horizon_dist_m": 442,
-     "window_exit_m": 1463,
-     "window_limited": false,
-     "err": 5.965
-    },
-    {
-     "imageid": "NLB_827077750EDR_F1210396NCAM00268M_",
-     "col": 252,
-     "row": 250,
-     "az": 29.475,
-     "real_el": -3.768,
-     "pred_el": -2.759,
-     "pred_horizon_dist_m": 446,
-     "window_exit_m": 1467,
-     "window_limited": false,
-     "err": 1.009
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 908,
-     "row": 232,
-     "az": 29.669,
-     "real_el": -7.358,
-     "pred_el": -2.634,
-     "pred_horizon_dist_m": 446,
-     "window_exit_m": 1470,
-     "window_limited": false,
-     "err": 4.724
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 916,
-     "row": 192,
-     "az": 30.139,
-     "real_el": -5.725,
-     "pred_el": -2.259,
-     "pred_horizon_dist_m": 1342,
-     "window_exit_m": 1477,
-     "window_limited": false,
-     "err": 3.466
-    },
-    {
      "imageid": "NLB_827077750EDR_F1210396NCAM00268M_",
      "col": 268,
      "row": 209,
@@ -6590,18 +5828,6 @@
      "err": -0.16
     },
     {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 924,
-     "row": 152,
-     "az": 30.598,
-     "real_el": -4.121,
-     "pred_el": -2.129,
-     "pred_horizon_dist_m": 1360,
-     "window_exit_m": 1484,
-     "window_limited": false,
-     "err": 1.992
-    },
-    {
      "imageid": "NLB_827077750EDR_F1210396NCAM00268M_",
      "col": 276,
      "row": 199,
@@ -6612,18 +5838,6 @@
      "window_exit_m": 1488,
      "window_limited": false,
      "err": -0.31
-    },
-    {
-     "imageid": "NLB_827077719EDR_F1210396NCAM00268M_",
-     "col": 932,
-     "row": 112,
-     "az": 31.046,
-     "real_el": -2.547,
-     "pred_el": -1.857,
-     "pred_horizon_dist_m": 1368,
-     "window_exit_m": 1491,
-     "window_limited": false,
-     "err": 0.69
     },
     {
      "imageid": "NLB_827077750EDR_F1210396NCAM00268M_",

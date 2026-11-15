@@ -107,6 +107,19 @@ function peaks(pts) {
 }
 
 // ---------- 1. extract real skyline directions ----------
+// Manual exclusions found on review of the trace overlays (image evidence only, listed here so they can be audited).
+const EXCLUDE = [
+  { imageid: "NLB_808884389EDR_F1181608NCAM00252M_", colMin: 340, colMax: 490,
+    reason: "trace scattered over faint distant hills; not consistently on the sky boundary" },
+  { imageid: "NLB_818994980EDR_F1200346NCAM00271M_", colMin: 0, colMax: 295,
+    reason: "trace on a lower ridge with terrain visible above it" },
+  { imageid: "NLB_818994980EDR_F1200346NCAM00271M_", colMin: 885, colMax: 1023,
+    reason: "trace drops below the skyline at the right edge" },
+  { imageid: "NLB_818995760EDR_F1200346NCAM00272M_", colMin: 0, colMax: 255,
+    reason: "trace on a lower ridge with terrain visible above it; the true sky boundary starts near column 256" },
+  { imageid: "NLB_827077719EDR_F1210396NCAM00268M_", colMin: 260, colMax: 660,
+    reason: "dust haze: the far skyline is not distinguishable, the trace marks the farthest visible terrain edge" },
+];
 const cleanLog = [];
 const samples = []; // {stop, imageid, col, row, az, el}
 for (const m of meta) {
@@ -115,7 +128,7 @@ for (const m of meta) {
   // self-check: inverse then forward projection returns the pixel
   const ray = cahvorRay(cm, 512, 300), back = cahvorProject(cm, add(cm.C, scl(ray, 100)));
   if (Math.hypot(back[0] - 512, back[1] - 300) > 0.01) throw new Error("CAHVOR inverse check failed " + m.imageid);
-  let dropTop = 0, dropOut = 0, dropRamp = 0;
+  let dropTop = 0, dropOut = 0, dropRamp = 0, dropManual = 0;
   for (let i = 0; i < r.length; i++) {
     const y = r[i];
     if (y < 0) continue;
@@ -129,11 +142,12 @@ for (const m of meta) {
     const pv = i > 0 ? r[i - 1] : -1, nx = i < r.length - 1 ? r[i + 1] : -1;
     if ((pv > 5 && Math.abs(y - pv) >= 36) || (nx > 5 && Math.abs(y - nx) >= 36)) { dropRamp++; continue; } // path-tracer step limit (5 px/col): jump between edges, not a skyline
     const x = COL0 + i * COLSTEP;
+    if (EXCLUDE.some((e) => e.imageid === m.imageid && x >= e.colMin && x <= e.colMax)) { dropManual++; continue; }
     const d = mul(M, cahvorRay(cm, x, y));                         // site frame N,E,D
     const az = ((Math.atan2(d[1], d[0]) / RAD) + 360) % 360, el = Math.asin(-d[2]) / RAD;
     samples.push({ sol: m.sol, rmc: m.rmc, imageid: m.imageid, col: x, row: y, az, el });
   }
-  cleanLog.push({ imageid: m.imageid, traced: r.filter((v) => v >= 0).length, dropped_frame_top: dropTop, dropped_isolated: dropOut, dropped_tracer_ramp: dropRamp });
+  cleanLog.push({ imageid: m.imageid, traced: r.filter((v) => v >= 0).length, dropped_frame_top: dropTop, dropped_isolated: dropOut, dropped_tracer_ramp: dropRamp, dropped_manual: dropManual });
 }
 
 // attitude check: rover heading from the quaternion vs route.json yaw
@@ -205,7 +219,11 @@ const out = {
   method: { eye_height_m: EYE_H, predicted_skyline: "web/js/visibility.js skyline(), 0.1 deg azimuth, maxRange 2500 m, DEM web/data/dem.f32 (2.5 x 2.5 km window, 1 m)",
     real_skyline: "Navcam left B full-frame EDR JPEGs; sky/terrain boundary traced per column (see validation/README.md), sampled every 8 px; pixel to direction via the CAHVOR model and rover attitude quaternion published with each image",
     window_limited_rule: `horizon point within ${EDGE_MARGIN_M} m of where the ray leaves the DEM window`, tuning: "none; no model parameter was changed or fitted" },
-  attitude_check: attitudeCheck, extraction_cleaning: cleanLog,
+  images: meta.map((m) => ({ sol: m.sol, site_drive: m.rmc, imageid: m.imageid, camera: "Navcam left (NAV_LEFT_B), full frame 1024x1024", date_taken_utc: m.date_taken, lmst: m.lmst,
+    mast_az_deg: m.mast_az, mast_el_deg: m.mast_el, credit: "NASA/JPL-Caltech",
+    page: `https://mars.nasa.gov/raw_images/${m.id}`,
+    jpg: `https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/${String(m.sol).padStart(5, "0")}/opgs/edr/ncam/${m.imageid}.JPG` })),
+  attitude_check: attitudeCheck, extraction_cleaning: cleanLog, manual_exclusions: EXCLUDE,
   pooled: { all: stats(pooled.map((c) => c.err)), horizon_inside_window: stats(pooled.filter((c) => !c.window_limited).map((c) => c.err)),
     horizon_window_limited: stats(pooled.filter((c) => c.window_limited).map((c) => c.err)) },
   stops,
