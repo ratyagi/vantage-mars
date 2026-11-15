@@ -16,11 +16,11 @@ async function init() {
   try {
     S.T = await Terrain.load("data/");
     $("dataBadge").textContent = `REAL DEM: ${S.T.meta.product || "USGS Gale 1 m"}, ${S.T.width}x${S.T.height} at ${S.T.cell} m`;
-    $("dataBadge").className = "badge real";
+    $("dataBadge").className = "chip real";
   } catch (e) {
     S.T = makeSyntheticTerrain(800, 800, 2);
     $("dataBadge").textContent = "SYNTHETIC TERRAIN (not Mars data)";
-    $("dataBadge").className = "badge synth";
+    $("dataBadge").className = "chip synth";
     const b = $("banner");
     b.classList.remove("hidden");
     b.textContent = "Showing SYNTHETIC test terrain because data/dem.f32 was not found. Run pipeline/fetch_terrain_window.py to fetch the real USGS Gale DEM. Nothing on this screen describes real Mars until then.";
@@ -42,9 +42,15 @@ let view = { px: 1, W: 0, H: 0 };
 
 function setupMap() {
   const T = S.T;
-  const cssW = map.clientWidth || 600;
-  map.width = cssW; map.height = Math.round(cssW * (T.extentY / T.extentX));
-  view.W = map.width; view.H = map.height; view.px = map.width / T.extentX;
+  const wrap = $("mapwrap");
+  const aw = Math.max(300, wrap.clientWidth - 24), ah = Math.max(300, wrap.clientHeight - 24);
+  const aspect = T.extentY / T.extentX;
+  let w = aw, h = aw * aspect;
+  if (h > ah) { h = ah; w = ah / aspect; }
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  map.style.width = Math.round(w) + "px"; map.style.height = Math.round(h) + "px";
+  map.width = Math.round(w * dpr); map.height = Math.round(h * dpr);
+  view.W = map.width; view.H = map.height; view.px = map.width / T.extentX; view.dpr = dpr;
   drawHillshade();
 }
 function drawHillshade() {
@@ -52,7 +58,16 @@ function drawHillshade() {
   const g = hillshade(T, sun.azDeg, Math.max(15, sun.elevDeg), 3);
   const off = document.createElement("canvas"); off.width = T.width; off.height = T.height;
   const id = off.getContext("2d").createImageData(T.width, T.height);
-  for (let i = 0; i < g.length; i++) { id.data[i * 4] = g[i] * 0.95; id.data[i * 4 + 1] = g[i] * 0.78; id.data[i * 4 + 2] = g[i] * 0.62; id.data[i * 4 + 3] = 255; }
+  const lo = T.meta.min ?? -4000, hi = T.meta.max ?? -3000;
+  for (let i = 0; i < g.length; i++) {
+    const z = T.data[i], e = isFinite(z) ? Math.max(0, Math.min(1, (z - lo) / (hi - lo || 1))) : 0.5;
+    const k = 0.35 + 0.65 * (g[i] / 255); // relief
+    // subtle hypsometric tint: low = cool slate, high = warm sand
+    id.data[i * 4] = 255 * k * (0.62 + 0.38 * e);
+    id.data[i * 4 + 1] = 255 * k * (0.64 + 0.22 * e);
+    id.data[i * 4 + 2] = 255 * k * (0.70 - 0.22 * e);
+    id.data[i * 4 + 3] = 255;
+  }
   off.getContext("2d").putImageData(id, 0, 0);
   S.hs = off;
 }
@@ -68,10 +83,10 @@ function drawMap() {
   if ($("showView").checked && S.vs) drawViewshed();
   // route with blind runs
   if (S.rows.length > 1) {
-    mctx.lineWidth = 3; mctx.strokeStyle = "#fff"; mctx.beginPath();
+    mctx.lineWidth = 3 * (view.dpr || 1); mctx.lineJoin = "round"; mctx.strokeStyle = "#fff"; mctx.beginPath();
     S.rows.forEach((p, i) => { const [a, b] = toPx(p.x, p.y); i ? mctx.lineTo(a, b) : mctx.moveTo(a, b); });
     mctx.stroke();
-    mctx.strokeStyle = "#eb5757"; mctx.lineWidth = 5;
+    mctx.strokeStyle = "#ef5b5b"; mctx.lineWidth = 5 * (view.dpr || 1);
     for (const r of S.runs) {
       mctx.beginPath();
       let first = true;
@@ -81,23 +96,41 @@ function drawMap() {
   } else if (S.route.length) {
     for (const p of S.route) { const [a, b] = toPx(p.x, p.y); mctx.fillStyle = "#fff"; mctx.fillRect(a - 3, b - 3, 6, 6); }
   }
-  marker(S.habitat, "H", "#7fb4e6"); marker(S.rover, "R", "#6fcf97");
-  S.landmarks.forEach((l, i) => marker(l, "L" + (i + 1), "#e0a458"));
+  marker(S.habitat, "H", "#7fb4ff"); marker(S.rover, "R", "#5fd39a");
+  S.landmarks.forEach((l, i) => marker(l, "L" + (i + 1), "#f5b94a"));
+  scaleAndNorth();
   const cur = currentSample();
   if (cur) {
-    const [a, b] = toPx(cur.x, cur.y);
-    mctx.strokeStyle = "#00e5ff"; mctx.lineWidth = 2; mctx.beginPath(); mctx.arc(a, b, 7, 0, 7); mctx.stroke();
-    const az = lookAz() * Math.PI / 180, f = $("fov").value * Math.PI / 360;
-    mctx.beginPath(); mctx.moveTo(a, b);
-    mctx.lineTo(a + Math.sin(az - f) * 40, b - Math.cos(az - f) * 40);
-    mctx.moveTo(a, b); mctx.lineTo(a + Math.sin(az + f) * 40, b - Math.cos(az + f) * 40); mctx.stroke();
+    const d = view.dpr || 1, [a, b] = toPx(cur.x, cur.y);
+    const az = lookAz() * Math.PI / 180, f = $("fov").value * Math.PI / 360, R = 46 * d;
+    mctx.fillStyle = "rgba(76,201,216,.16)"; mctx.strokeStyle = "#4cc9d8"; mctx.lineWidth = 1.5 * d;
+    mctx.beginPath(); mctx.moveTo(a, b); mctx.arc(a, b, R, az - f - Math.PI / 2, az + f - Math.PI / 2); mctx.closePath(); mctx.fill(); mctx.stroke();
+    mctx.fillStyle = "#4cc9d8"; mctx.beginPath(); mctx.arc(a, b, 5 * d, 0, 7); mctx.fill();
+    mctx.strokeStyle = "#fff"; mctx.lineWidth = 1.5 * d; mctx.stroke();
   }
 }
 function marker(m, label, color) {
   if (!m) return;
-  const [a, b] = toPx(m.x, m.y);
-  mctx.fillStyle = color; mctx.beginPath(); mctx.arc(a, b, 8, 0, 7); mctx.fill();
-  mctx.fillStyle = "#111"; mctx.font = "bold 10px sans-serif"; mctx.textAlign = "center"; mctx.fillText(label, a, b + 3.5);
+  const d = view.dpr || 1, [a, b] = toPx(m.x, m.y);
+  mctx.fillStyle = "rgba(0,0,0,.55)"; mctx.beginPath(); mctx.arc(a, b, 10 * d, 0, 7); mctx.fill();
+  mctx.fillStyle = color; mctx.beginPath(); mctx.arc(a, b, 8 * d, 0, 7); mctx.fill();
+  mctx.fillStyle = "#0b0e12"; mctx.font = `700 ${10 * d}px sans-serif`; mctx.textAlign = "center"; mctx.fillText(label, a, b + 3.5 * d);
+}
+function scaleAndNorth() {
+  const T = S.T, d = view.dpr || 1;
+  const nice = [10, 20, 50, 100, 200, 250, 500, 1000];
+  const target = T.extentX * 0.2;
+  const len = nice.reduce((p, c) => (Math.abs(c - target) < Math.abs(p - target) ? c : p), nice[0]);
+  const px = len * view.px, x0 = view.W - px - 16 * d, y0 = view.H - 18 * d;
+  mctx.strokeStyle = "#fff"; mctx.lineWidth = 2 * d; mctx.beginPath();
+  mctx.moveTo(x0, y0 - 5 * d); mctx.lineTo(x0, y0); mctx.lineTo(x0 + px, y0); mctx.lineTo(x0 + px, y0 - 5 * d); mctx.stroke();
+  mctx.fillStyle = "#fff"; mctx.font = `600 ${11 * d}px sans-serif`; mctx.textAlign = "center";
+  mctx.shadowColor = "#000"; mctx.shadowBlur = 4 * d;
+  mctx.fillText(len >= 1000 ? len / 1000 + " km" : len + " m", x0 + px / 2, y0 - 8 * d);
+  const nx = view.W - 26 * d, ny = 30 * d;
+  mctx.beginPath(); mctx.moveTo(nx, ny - 14 * d); mctx.lineTo(nx - 6 * d, ny + 6 * d); mctx.lineTo(nx, ny + 2 * d); mctx.lineTo(nx + 6 * d, ny + 6 * d); mctx.closePath(); mctx.fill();
+  mctx.fillText("N", nx, ny + 20 * d);
+  mctx.shadowBlur = 0;
 }
 function drawSlope() {
   const T = S.T, st = Math.max(2, Math.round(T.width / 160));
@@ -171,80 +204,111 @@ function refresh() {
   const c = currentSample();
   $("oPos").textContent = c ? `${c.s.toFixed(0)} m of ${S.rows[S.rows.length - 1].s.toFixed(0)} m` : "";
   const sun = sunNow();
+  $("sunChip").textContent = `Sun ${sun.elevDeg.toFixed(0)}\u00b0 el / ${sun.azDeg.toFixed(0)}\u00b0 az`;
   $("sunReadout").textContent = `Sun: elevation ${sun.elevDeg.toFixed(1)} deg, azimuth ${sun.azDeg.toFixed(0)} deg (approximate, geometric; no atmosphere or equation of time).`
     + (S.rows.length ? ` Walk estimate ${walkMinutes(S.T, S.rows).toFixed(0)} min (assumed 2 km/h, derated to 0 at 20 deg).` : "");
 }
 
 // ---------- strip ----------
 function drawStrip() {
-  const c = $("strip"), ctx = c.getContext("2d");
-  c.width = c.clientWidth; c.height = c.clientHeight;
-  ctx.fillStyle = "#0e0c0a"; ctx.fillRect(0, 0, c.width, c.height);
-  if (!S.rows.length) { ctx.fillStyle = "#a99a8a"; ctx.fillText("Draw a route to see visibility.", 12, 24); return; }
+  const c = $("strip"), ctx = c.getContext("2d"), d = Math.min(2, window.devicePixelRatio || 1);
+  const cw = c.clientWidth, ch = c.clientHeight;
+  c.width = cw * d; c.height = ch * d; ctx.scale(d, d);
+  ctx.fillStyle = "#0b0e12"; ctx.fillRect(0, 0, cw, ch);
+  ctx.font = "11px Inter, system-ui, sans-serif";
+  if (!S.rows.length) { ctx.fillStyle = "#8b95a4"; ctx.fillText("Draw a route on the map to see what stays in view.", 14, 28); return; }
   const tg = targets(), n = S.rows.length, total = S.rows[n - 1].s;
-  const left = 78, rowH = 18, top = 8, W = c.width - left - 8;
+  const left = 84, rowH = 14, gap = 4, top = 10, W = cw - left - 12;
   const X = (s) => left + (s / total) * W;
-  ctx.font = "11px sans-serif"; ctx.textAlign = "right";
   const lines = [...tg.map((t) => ({ id: t.id, label: t.name })), { id: "__p", label: "Partner" }];
+  ctx.textAlign = "right";
   lines.forEach((ln, k) => {
-    const y = top + k * (rowH + 3);
-    ctx.fillStyle = "#a99a8a"; ctx.fillText(ln.label.slice(0, 12), left - 6, y + 13);
+    const y = top + k * (rowH + gap);
+    ctx.fillStyle = "#8b95a4"; ctx.fillText(ln.label.slice(0, 13), left - 8, y + 11);
     for (let i = 0; i < n - 1; i++) {
       const v = ln.id === "__p" ? S.rows[i].partner?.visible : S.rows[i].vis[ln.id]?.visible;
-      ctx.fillStyle = v === true ? "#2f8f6b" : v === false ? "#a33a3a" : "#3a312a";
-      ctx.fillRect(X(S.rows[i].s), y, Math.max(1, X(S.rows[i + 1].s) - X(S.rows[i].s) + 0.5), rowH);
+      ctx.fillStyle = v === true ? "#2e9e78" : v === false ? "#b4454a" : "#2a313b";
+      ctx.fillRect(X(S.rows[i].s), y, Math.max(1, X(S.rows[i + 1].s) - X(S.rows[i].s) + 0.6), rowH);
     }
   });
-  const base = top + lines.length * (rowH + 3) + 6;
-  // slope
-  ctx.fillStyle = "#a99a8a"; ctx.fillText("Slope", left - 6, base + 30);
-  const hgt = c.height - base - 22;
-  ctx.strokeStyle = "#e0a458"; ctx.beginPath();
+  const base = top + lines.length * (rowH + gap) + 6, hgt = Math.max(24, ch - base - 30);
+  ctx.fillStyle = "#8b95a4"; ctx.fillText("Slope", left - 8, base + 12);
+  for (const [deg, col] of [[15, "rgba(245,185,74,.6)"], [20, "rgba(239,91,91,.7)"]]) {
+    const y = base + hgt - (deg / 30) * hgt; ctx.strokeStyle = col; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left + W, y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = col; ctx.textAlign = "left"; ctx.fillText(deg + "°", left + W - 22, y - 3); ctx.textAlign = "right";
+  }
+  ctx.strokeStyle = "#e0774a"; ctx.lineWidth = 1.5; ctx.beginPath();
   S.rows.forEach((r, i) => { const sl = S.T.slopeDeg(r.x, r.y); const y = base + hgt - Math.min(30, isFinite(sl) ? sl : 0) / 30 * hgt; i ? ctx.lineTo(X(r.s), y) : ctx.moveTo(X(r.s), y); });
   ctx.stroke();
-  for (const [deg, col] of [[15, "#f2994a"], [20, "#eb5757"]]) {
-    const y = base + hgt - (deg / 30) * hgt; ctx.strokeStyle = col; ctx.setLineDash([4, 4]);
-    ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left + W, y); ctx.stroke(); ctx.setLineDash([]);
-  }
-  ctx.fillStyle = "#a99a8a"; ctx.textAlign = "center"; ctx.fillText("distance along route (m)", left + W / 2, c.height - 4);
+  ctx.fillStyle = "#5d6775"; ctx.textAlign = "center";
+  const step = total > 1500 ? 500 : total > 600 ? 200 : 100;
+  for (let s = 0; s <= total; s += step) { ctx.fillText(s + " m", Math.min(X(s), left + W - 14), ch - 5); }
   const cur = currentSample();
-  if (cur) { ctx.strokeStyle = "#00e5ff"; ctx.beginPath(); ctx.moveTo(X(cur.s), 0); ctx.lineTo(X(cur.s), c.height - 14); ctx.stroke(); }
+  if (cur) { ctx.strokeStyle = "#4cc9d8"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X(cur.s), 2); ctx.lineTo(X(cur.s), ch - 16); ctx.stroke(); }
+  S.stripGeom = { left, W, total };
 }
 
 // ---------- panorama ----------
 function drawPano() {
   const c = $("pano"), ctx = c.getContext("2d");
   const cur = currentSample();
-  const W = 720, H = Math.round(720 / 3.2); c.width = W; c.height = H;
-  if (!cur) { ctx.fillStyle = "#0e0c0a"; ctx.fillRect(0, 0, W, H); return; }
+  const W = 960, H = 300; c.width = W; c.height = H;
+  if (!cur) { ctx.fillStyle = "#0b0e12"; ctx.fillRect(0, 0, W, H); return; }
   const sun = sunNow(), az = lookAz(), fov = +$("fov").value;
   const p = renderPanorama(S.T, cur.x, cur.y, +$("eyeH").value, az, fov, W, H, sun, { angMin: -30, angMax: 20 });
   ctx.putImageData(new ImageData(p.pixels, W, H), 0, 0);
   const colOf = (b) => ((((b - az + 540) % 360) - 180) / fov + 0.5) * W;
-  ctx.font = "11px sans-serif"; ctx.textAlign = "center";
+  const rowOfA = (a) => ((p.angMax - a) / (p.angMax - p.angMin)) * (H - 1);
+  ctx.font = "13px Inter, system-ui, sans-serif";
+  // horizon reference and skyline
+  ctx.strokeStyle = "rgba(255,255,255,.25)"; ctx.setLineDash([4, 5]); ctx.beginPath();
+  ctx.moveTo(0, rowOfA(0)); ctx.lineTo(W, rowOfA(0)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 1.2; ctx.beginPath();
+  for (let x = 0; x < W; x++) { const y = p.skylineRow[x]; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  ctx.stroke();
+  // sun marker
+  if (sun.elevDeg > p.angMin && sun.elevDeg < p.angMax) {
+    const sx = colOf(sun.azDeg);
+    if (sx > 0 && sx < W) { ctx.fillStyle = "#fff3c4"; ctx.beginPath(); ctx.arc(sx, rowOfA(sun.elevDeg), 6, 0, 7); ctx.fill(); }
+  }
+  // compass band
+  const g = ctx.createLinearGradient(0, 0, 0, 20); g.addColorStop(0, "rgba(8,10,13,.85)"); g.addColorStop(1, "rgba(8,10,13,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 26);
+  ctx.textAlign = "center"; ctx.fillStyle = "#e7eaef";
+  const names = { 0: "N", 45: "NE", 90: "E", 135: "SE", 180: "S", 225: "SW", 270: "W", 315: "NW" };
+  for (let a = Math.ceil((az - fov / 2) / 15) * 15; a <= az + fov / 2; a += 15) {
+    const deg = ((a % 360) + 360) % 360, x = colOf(deg);
+    ctx.strokeStyle = "rgba(231,234,239,.6)"; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, deg % 45 === 0 ? 9 : 5); ctx.stroke();
+    if (deg % 45 === 0) ctx.fillText(names[deg], x, 22); else if (fov <= 120) { ctx.fillStyle = "#8b95a4"; ctx.fillText(deg, x, 18); ctx.fillStyle = "#e7eaef"; }
+  }
+  // targets
   let k = 0;
   for (const t of targets()) {
     const v = cur.vis[t.id]; if (!v) continue;
     const stag = (k++ % 4) * 13;
     const x = colOf(v.bearing); if (x < 0 || x > W) continue;
-    const ang = (Math.atan2(t.h - 0, v.dist) * 180) / Math.PI - (Math.atan2(0, v.dist));
-    const baseA = Math.atan2((S.T.heightAt(t.x, t.y) - (S.T.heightAt(cur.x, cur.y) + +$("eyeH").value)), v.dist) * 180 / Math.PI;
-    const y = ((p.angMax - (baseA + ang)) / (p.angMax - p.angMin)) * (H - 1);
-    ctx.fillStyle = v.visible ? "#6fcf97" : "#eb5757";
-    ctx.beginPath(); ctx.moveTo(x, y - 12); ctx.lineTo(x - 5, y - 20); ctx.lineTo(x + 5, y - 20); ctx.fill();
-    ctx.fillText(`${t.name} ${v.dist.toFixed(0)} m${v.visible ? "" : " (hidden)"}`, x, Math.max(11, y - 24 - stag));
+    const baseA = Math.atan2(S.T.heightAt(t.x, t.y) - (S.T.heightAt(cur.x, cur.y) + +$("eyeH").value), v.dist) * 180 / Math.PI;
+    const topA = baseA + (Math.atan2(t.h, v.dist) * 180 / Math.PI);
+    const y = rowOfA(topA);
+    ctx.fillStyle = v.visible ? "#5fd39a" : "#ef5b5b";
+    ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x - 5, y - 13); ctx.lineTo(x + 5, y - 13); ctx.closePath(); ctx.fill();
+    const label = `${t.name}  ${v.dist.toFixed(0)} m${v.visible ? "" : "  hidden"}`;
+    const ty = Math.max(34, y - 17 - stag), tw = ctx.measureText(label).width + 10;
+    ctx.fillStyle = "rgba(8,10,13,.8)"; ctx.fillRect(x - tw / 2, ty - 13, tw, 18);
+    ctx.fillStyle = v.visible ? "#5fd39a" : "#ef5b5b"; ctx.fillText(label, x, ty);
   }
-  ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, H - 16, W, 16);
-  ctx.fillStyle = "#efe6dc"; ctx.textAlign = "left";
-  ctx.fillText(`az ${az.toFixed(0)} deg  fov ${fov}  sun el ${sun.elevDeg.toFixed(1)} deg  eye ${$("eyeH").value} m`, 6, H - 4);
+  const bar = `az ${az.toFixed(0)}°   fov ${fov}°   sun ${sun.elevDeg.toFixed(1)}°   eye ${$("eyeH").value} m`;
+  ctx.fillStyle = "rgba(8,10,13,.75)"; ctx.fillRect(0, H - 21, W, 21);
+  ctx.textAlign = "left"; ctx.fillStyle = "#c3cad4"; ctx.fillText(bar, 10, H - 6);
   $("panoTag").textContent = S.T.meta.synthetic ? "SYNTHETIC" : "predicted, unvalidated";
-  $("panoNote").textContent = "Terrain only: no rocks smaller than the DEM cell, no atmosphere model, no color. Markers show landmark top positions.";
+  $("panoNote").textContent = "Terrain only. No rocks below DEM cell size, no atmosphere, no color. White line is the predicted skyline.";
 }
 
 // ---------- flags ----------
 function flags() {
   const ul = $("flags"); ul.innerHTML = "";
-  const add = (cls, text, ev) => { const li = document.createElement("li"); li.className = cls; li.innerHTML = text + `<span class="ev">${ev}</span>`; ul.appendChild(li); };
+  const add = (cls, text, ev) => { const li = document.createElement("li"); li.className = cls; li.innerHTML = `<div>${text}<span class="ev">${ev}</span></div>`; ul.appendChild(li); };
   const cur = currentSample();
   if (!cur) { add("", "Draw a route to get flags.", "n/a"); return; }
   const sun = sunNow(), thr = +$("thrSun").value;
@@ -270,13 +334,16 @@ function cuff() {
   const maxSl = Math.max(...ahead.map((r) => S.T.slopeDeg(r.x, r.y)).filter(isFinite), 0);
   const nextBlind = S.runs.find((r) => r.to >= cur.s);
   const hab = S.habitat ? Math.hypot(cur.x - S.habitat.x, cur.y - S.habitat.y) : null;
-  const sun = sunNow();
+  const sun = sunNow(), thr = +$("thrSun").value;
+  const kpi = (cls, l, v, u, s) => `<div class="kpi ${cls}"><div class="l">${l}</div><div class="v">${v}<small> ${u}</small></div><div class="s">${s || ""}</div></div>`;
   b.innerHTML =
-    `Heading <span class="k">${cur.heading.toFixed(0)}&deg;</span><br>` +
-    (hab !== null ? `Habitat <span class="k">${hab.toFixed(0)} m</span> ${cur.vis.hab.visible ? "in view" : "<b>hidden</b>"}<br>` : "") +
-    `Max slope next 120 m <span class="k">${maxSl.toFixed(0)}&deg;</span><br>` +
-    (nextBlind ? `Blind stretch at <span class="k">${Math.max(0, nextBlind.from - cur.s).toFixed(0)} m</span> for ${nextBlind.length.toFixed(0)} m<br>` : "No blind stretch ahead<br>") +
-    `Sun <span class="k">${sun.elevDeg.toFixed(0)}&deg;</span> el<small>Unvalidated prediction. Terrain model only.</small>`;
+    kpi("", "Heading", cur.heading.toFixed(0), "\u00b0", "travel direction") +
+    (hab !== null ? kpi(cur.vis.hab.visible ? "ok" : "bad", "Habitat", hab.toFixed(0), "m", cur.vis.hab.visible ? "in view" : "hidden") : kpi("", "Habitat", "--", "", "not placed")) +
+    kpi(maxSl > 20 ? "bad" : maxSl > 15 ? "warn" : "", "Max slope", maxSl.toFixed(0), "\u00b0", "next 120 m") +
+    (nextBlind ? kpi("warn", "Blind stretch", Math.max(0, nextBlind.from - cur.s).toFixed(0), "m ahead", nextBlind.length.toFixed(0) + " m long") : kpi("ok", "Blind stretch", "none", "", "next 120 m")) +
+    kpi(sun.elevDeg < thr ? "warn" : "", "Sun elevation", sun.elevDeg.toFixed(0), "\u00b0", sun.elevDeg < thr ? "low sun" : "ok") +
+    kpi("", "Walk time", S.rows.length ? walkMinutes(S.T, S.rows).toFixed(0) : "--", "min", "assumed pace") +
+    `<div class="cuffnote">Unvalidated terrain-model prediction.</div>`;
 }
 
 // ---------- provenance ----------
@@ -323,6 +390,22 @@ function bind() {
   };
   for (const id of ["pos", "ltst", "ls", "lookMode", "lookAz", "fov"]) $(id).addEventListener("input", () => { if (id === "ltst" || id === "ls") drawHillshade(); recompute(); });
   for (const id of ["eyeH", "partnerGap", "landH", "habH", "thrSun", "blindMin", "showView", "showSlope"]) $(id).addEventListener("input", recompute);
+  map.addEventListener("mousemove", (ev) => {
+    const p = pickXY(ev), z = S.T.heightAt(p.x, p.y), sl = S.T.slopeDeg(p.x, p.y);
+    $("hoverReadout").textContent = S.T.inside(p.x, p.y) ? `E ${p.x.toFixed(0)} m  S ${p.y.toFixed(0)} m   elev ${isFinite(z) ? z.toFixed(1) : "--"} m   slope ${isFinite(sl) ? sl.toFixed(1) : "--"}\u00b0` : "outside window";
+  });
+  $("strip").addEventListener("click", (ev) => {
+    if (!S.stripGeom || !S.rows.length) return;
+    const r = $("strip").getBoundingClientRect(), g = S.stripGeom;
+    const t = Math.max(0, Math.min(1, ((ev.clientX - r.left) - g.left) / g.W));
+    $("pos").value = Math.round(t * 1000); recompute();
+  });
+  let timer = null;
+  $("btnPlay").onclick = () => {
+    if (timer) { clearInterval(timer); timer = null; $("btnPlay").textContent = "Play"; return; }
+    $("btnPlay").textContent = "Pause";
+    timer = setInterval(() => { let v = +$("pos").value + 4; if (v > 1000) v = 0; $("pos").value = v; refresh(); scheduleViewshed(); }, 90);
+  };
   window.addEventListener("resize", () => { setupMap(); refresh(); });
 }
 function defaultScene() {
