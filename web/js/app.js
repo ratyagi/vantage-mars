@@ -170,7 +170,7 @@ function runLocate(job) {
   S.loc = { ...job, x0, y0, g, gw, gh, err, done: false, best: null };
   $("showReach").checked = false;
   const box = $("locBox"); box.classList.remove("hidden");
-  box.innerHTML = `<div class="lh">HORIZON FIX <button id="locClose">Close</button></div><div class="lsrc">Matching the horizon against ${gw * gh} candidate positions...</div><div class="locbar"><i id="locBar"></i></div>`;
+  box.innerHTML = `<div class="lh">HORIZON FIX</div><div class="lmain">Matching the horizon against ${gw * gh} positions...</div><button class="lclose" id="locClose">Close</button><div class="locbar"><i id="locBar"></i></div>`;
   $("locClose").onclick = closeLocate;
   let k = 0;
   const step = () => {
@@ -189,11 +189,8 @@ function runLocate(job) {
     S.loc.best = best; S.loc.alt = alt; S.loc.done = true; drawMap();
     const miss = Math.hypot(best.x - job.truth.x, best.y - job.truth.y), conf = alt > best.e * 1.5;
     const why = job.sol === 4634 ? "Real horizon is the far crater rim, outside the 2.5 km terrain window." : job.sol === 4839 ? "Only about 30\u00b0 of skyline in this frame." : "";
-    box.innerHTML = `<div class="lh">HORIZON FIX <button id="locClose">Close</button></div>
-      <div class="lsrc">${job.sim ? "Simulated: one turn on the spot, 0.5\u00b0 noise" : `Real Curiosity Navcam photo, sol ${job.sol}`}</div>
-      <div class="lbig ${conf ? "" : "bad"}">${miss.toFixed(0)} m from true position</div>
-      <div class="lmeta">fit ${best.e.toFixed(2)}\u00b0 \u00b7 best elsewhere ${alt.toFixed(2)}\u00b0 \u00b7 ${conf ? "unambiguous" : "ambiguous, do not trust"}</div>
-      <div class="lnote">${why ? why + " " : ""}Searched 1.2 \u00d7 1.2 km. Heading from a sun sighting. Advisory.</div>`;
+    const src = job.sim ? "simulated turn on the spot" : `real Navcam photo, sol ${job.sol}`;
+    box.innerHTML = `<div class="lh">HORIZON FIX</div><div class="lmain" title="Skyline fit ${best.e.toFixed(2)}\u00b0, best fit elsewhere ${alt.toFixed(2)}\u00b0. Searched 1.2 \u00d7 1.2 km. Heading from a sun sighting. Advisory."><b class="${conf ? "" : "bad"}">${miss.toFixed(0)} m</b> from true position \u00b7 ${conf ? "unambiguous" : "ambiguous, do not trust"} \u00b7 ${src}</div><button class="lclose" id="locClose">Close</button><div class="lsub">${why ? why + " " : ""}Fit ${best.e.toFixed(2)}\u00b0 vs ${alt.toFixed(2)}\u00b0 elsewhere. Heading from a sun sighting. Advisory.</div>`;
     $("locClose").onclick = closeLocate;
   };
   step();
