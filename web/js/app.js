@@ -170,8 +170,9 @@ function runLocate(job) {
   S.loc = { ...job, x0, y0, g, gw, gh, err, done: false, best: null };
   $("showReach").checked = false;
   const box = $("locBox"); box.classList.remove("hidden");
-  box.innerHTML = `<div class="lh">HORIZON FIX</div><div class="lmain">Matching the horizon against ${gw * gh} positions...</div><button class="lclose" id="locClose">Close</button><div class="locbar"><i id="locBar"></i></div>`;
+  box.innerHTML = `<div class="lh">HORIZON FIX</div><button class="lclose" id="locClose">Close</button><div class="lmain">Matching the horizon against ${gw * gh} positions...</div><div class="locbar"><i id="locBar"></i></div>`;
   $("locClose").onclick = closeLocate;
+  setupMap(); refresh();
   let k = 0;
   const step = () => {
     if (id !== locJob) return;
@@ -190,12 +191,12 @@ function runLocate(job) {
     const miss = Math.hypot(best.x - job.truth.x, best.y - job.truth.y), conf = alt > best.e * 1.5;
     const why = job.sol === 4634 ? "Real horizon is the far crater rim, outside the 2.5 km terrain window." : job.sol === 4839 ? "Only about 30\u00b0 of skyline in this frame." : "";
     const src = job.sim ? "simulated turn on the spot" : `real Navcam photo, sol ${job.sol}`;
-    box.innerHTML = `<div class="lh">HORIZON FIX</div><div class="lmain" title="Skyline fit ${best.e.toFixed(2)}\u00b0, best fit elsewhere ${alt.toFixed(2)}\u00b0. Searched 1.2 \u00d7 1.2 km. Heading from a sun sighting. Advisory."><b class="${conf ? "" : "bad"}">${miss.toFixed(0)} m</b> from true position \u00b7 ${conf ? "unambiguous" : "ambiguous, do not trust"} \u00b7 ${src}</div><button class="lclose" id="locClose">Close</button><div class="lsub">${why ? why + " " : ""}Fit ${best.e.toFixed(2)}\u00b0 vs ${alt.toFixed(2)}\u00b0 elsewhere. Heading from a sun sighting. Advisory.</div>`;
+    box.innerHTML = `<div class="lh">HORIZON FIX</div><button class="lclose" id="locClose">Close</button><div class="lmain"><b class="${conf ? "" : "bad"}">${miss.toFixed(0)} m</b> from true position \u00b7 ${conf ? "unambiguous" : "ambiguous, do not trust"}</div><div class="lsub">${src.charAt(0).toUpperCase() + src.slice(1)}. ${why ? why + " " : ""}Skyline fit ${best.e.toFixed(2)}\u00b0 vs ${alt.toFixed(2)}\u00b0 for the best spot elsewhere. Heading from a sun sighting. Advisory.</div>`;
     $("locClose").onclick = closeLocate;
   };
   step();
 }
-function closeLocate() { locJob++; S.loc = null; S.locImg = null; $("locBox").classList.add("hidden"); drawMap(); }
+function closeLocate() { locJob++; S.loc = null; S.locImg = null; $("locBox").classList.add("hidden"); setupMap(); refresh(); }
 function drawLoc() {
   const L = S.loc; if (!L) return;
   if (!S.locImg) {
@@ -236,7 +237,8 @@ function setupMap() {
   const T = S.T;
   if (!S.view) fitView();
   const wrap = $("mapwrap"), lg = wrap.querySelector(".legend");
-  const aw = Math.max(300, wrap.clientWidth - 28), ah = Math.max(300, wrap.clientHeight - 28 - (lg ? lg.offsetHeight + 10 : 0));
+  const lb = $("locBox"), lbH = lb.classList.contains("hidden") ? 0 : lb.offsetHeight + 10;
+  const aw = Math.max(240, wrap.clientWidth - 28), ah = Math.max(240, wrap.clientHeight - 28 - (lg ? lg.offsetHeight + 10 : 0) - lbH);
   const side = Math.min(aw, ah);
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   map.style.width = Math.round(side) + "px"; map.style.height = Math.round(side) + "px";
@@ -613,7 +615,7 @@ function confidence(cur) {
   let diff = 0;
   for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; if (pointHold(cur.x + r * Math.cos(a), cur.y + r * Math.sin(a)) !== here) diff++; }
   if (!diff) { el.textContent = `Robust within ${r} m`; el.className = "vconf robust"; el.title = `The slope and line-of-sight checks give the same answer at 8 points ${r} m around you (assumed position error).`; }
-  else { el.textContent = here ? `Clears at ${diff}/8 within ${r} m` : `HOLD at ${diff}/8 within ${r} m`; el.className = "vconf fragile"; el.title = `Within ${r} m (assumed position error), ${diff} of 8 nearby points ${here ? "pass" : "fail"} the slope or line-of-sight check. Treat this spot with care.`; }
+  else { el.textContent = here ? `${diff}/8 nearby points clear` : `${diff}/8 nearby points HOLD`; el.className = "vconf fragile"; el.title = `Within ${r} m (assumed position error), ${diff} of 8 nearby points ${here ? "pass" : "fail"} the slope or line-of-sight check. Treat this spot with care.`; }
 }
 function verdict(worst, why, cur) {
   confidence(cur);
