@@ -31,6 +31,21 @@ Predicts the view along a Mars EVA route on 1 m NASA terrain, flags where home d
 
 <br>
 
+## Contributions and impact
+
+| Contribution | Result on real data | Who it helps |
+|---|---|---|
+| **Position from the horizon alone** (no GPS, no compass on Mars) | Within **5 m** of Curiosity's true position from one real Navcam photo (sol 4748), 1.2 &times; 1.2 km search. Fails at 2 other photos, reported. | Lost or disoriented crew; a backup to any navigation system |
+| **Predicted first-person view, validated** | Skyline within **0.43&deg; and 0.63&deg;** of real Curiosity photos where the horizon is in the terrain window; 4.9&deg; low beyond it | Crews previewing a site; planners checking what a camera or person will see |
+| **Fastest way home and start-back clock** | **27 min** fastest return vs **110 min** retracing the route from the far end | EVA planners setting shelter and turn-back rules |
+| **Radio shadow and relay siting** | No line of sight to the habitat on **77%** of the route; one relay covers **100%** | Communications and habitat siting |
+| **Bad-day checks and a confidence badge** | Low sun, terrain shadow, slope, hidden ground, dust storm (0.1% direct sun at &tau; 4), verdict rechecked within the position error | Go / no-go calls during the walk |
+| **MCP server** | Same checks callable by any onboard assistant, offline, no dependencies | Future crew assistants on mission systems |
+
+**Why it matters:** on Mars the crew and the pre-planned route carry the safety burden that ground control and GPS carry on Earth. Vantage makes the questions "will I see where I am?" and "can I still get back?" answerable before the walk, from open NASA data, in a browser, with every assumption visible.
+
+<br>
+
 ## Why
 
 On foot, navigation depends on seeing landmarks, and terrain decides whether you can. Apollo crews misjudged distance and slope, the Apollo 14 crew did not recognize the rim of Cone Crater, and low sun made slopes look steeper than they were. On Mars the crew is also up to about 20 minutes from ground control by radio, so the route itself carries more of the safety burden.

@@ -224,3 +224,11 @@ body{font-variant-numeric:tabular-nums}
 .locbox b{color:#7fe3ee}.locbox .lh{font:700 11px var(--mono);letter-spacing:.12em;color:#4cc9d8;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .locbox .lh button{font:600 11px var(--sans);background:none;border:1px solid var(--line2);color:var(--mute);border-radius:6px;padding:2px 8px;cursor:pointer}
 .locbar{height:4px;border-radius:4px;background:var(--line);overflow:hidden;margin:6px 0 2px}.locbar i{display:block;height:100%;background:#4cc9d8;width:0}
+
+/* horizon fix card: opaque, compact, pinned to the top of the map so it never sits on the legend */
+.locbox{top:48px;bottom:auto;background:#0a0e12;padding:10px 12px;max-height:calc(100% - 60px);overflow:auto}
+.locbox .lsrc{color:var(--mute);font-size:11px;margin-bottom:6px}
+.locbox .lbig{font:700 20px var(--mono);color:#7fe3ee;margin:2px 0}
+.locbox .lbig.bad{color:var(--warn)}
+.locbox .lmeta{font:11px var(--mono);color:#c3cad4}
+.locbox .lnote{font-size:10.5px;color:var(--dim);margin-top:4px}

@@ -170,7 +170,7 @@ function runLocate(job) {
   S.loc = { ...job, x0, y0, g, gw, gh, err, done: false, best: null };
   $("showReach").checked = false;
   const box = $("locBox"); box.classList.remove("hidden");
-  box.innerHTML = `<div class="lh">HORIZON FIX <button id="locClose">Close</button></div>Matching the ${job.label} against ${gw * gh} candidate positions...<div class="locbar"><i id="locBar"></i></div>`;
+  box.innerHTML = `<div class="lh">HORIZON FIX <button id="locClose">Close</button></div><div class="lsrc">Matching the horizon against ${gw * gh} candidate positions...</div><div class="locbar"><i id="locBar"></i></div>`;
   $("locClose").onclick = closeLocate;
   let k = 0;
   const step = () => {
@@ -188,9 +188,12 @@ function runLocate(job) {
     let alt = Infinity; for (let q = 0; q < err.length; q++) { const x = x0 + ((q % gw) + 0.5) * g, y = y0 + (((q / gw) | 0) + 0.5) * g; if (Math.hypot(x - best.x, y - best.y) > 100 && err[q] < alt) alt = err[q]; }
     S.loc.best = best; S.loc.alt = alt; S.loc.done = true; drawMap();
     const miss = Math.hypot(best.x - job.truth.x, best.y - job.truth.y), conf = alt > best.e * 1.5;
-    box.innerHTML = `<div class="lh">HORIZON FIX <button id="locClose">Close</button></div>From the ${job.label} alone, Vantage places the walker here: <b>${miss.toFixed(0)} m from the true position</b> (searched ${(2 * R / 1000).toFixed(1)} \u00d7 ${(2 * R / 1000).toFixed(1)} km). Skyline fit ${best.e.toFixed(2)}\u00b0, best fit elsewhere ${alt.toFixed(2)}\u00b0: <b>${conf ? "unambiguous" : "ambiguous, do not trust this fix"}</b>.` +
-      (job.sol === 4634 ? " The real horizon here is the far crater rim, outside the 2.5 km terrain window, so this fix is expected to fail." : job.sol === 4839 ? " This frame shows only about 30\u00b0 of skyline, too little to pin down a position." : "") +
-      ` <span style="color:var(--dim)">Heading assumed known from a sun sighting. Terrain-model match, advisory.</span>`;
+    const why = job.sol === 4634 ? "Real horizon is the far crater rim, outside the 2.5 km terrain window." : job.sol === 4839 ? "Only about 30\u00b0 of skyline in this frame." : "";
+    box.innerHTML = `<div class="lh">HORIZON FIX <button id="locClose">Close</button></div>
+      <div class="lsrc">${job.sim ? "Simulated: one turn on the spot, 0.5\u00b0 noise" : `Real Curiosity Navcam photo, sol ${job.sol}`}</div>
+      <div class="lbig ${conf ? "" : "bad"}">${miss.toFixed(0)} m from true position</div>
+      <div class="lmeta">fit ${best.e.toFixed(2)}\u00b0 \u00b7 best elsewhere ${alt.toFixed(2)}\u00b0 \u00b7 ${conf ? "unambiguous" : "ambiguous, do not trust"}</div>
+      <div class="lnote">${why ? why + " " : ""}Searched 1.2 \u00d7 1.2 km. Heading from a sun sighting. Advisory.</div>`;
     $("locClose").onclick = closeLocate;
   };
   step();
